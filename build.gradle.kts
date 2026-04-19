@@ -1,44 +1,20 @@
 plugins {
-    java
-    id("xyz.jpenilla.run-paper") version "2.3.1"
+    base
 }
 
 group = providers.gradleProperty("groupId").get()
 version = providers.gradleProperty("projectVersion").get()
 
-base {
-    archivesName.set(providers.gradleProperty("projectId").get())
-}
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
 
-repositories {
-    mavenCentral()
-    maven("https://repo.papermc.io/repository/maven-public/")
-}
-
-dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
-}
-
-java {
-    val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
-    toolchain.languageVersion.set(JavaLanguageVersion.of(javaVersion))
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
-    options.encoding = "UTF-8"
-    options.release.set(javaVersion)
-}
-
-tasks.processResources {
-    val props = mapOf("version" to project.version)
-    inputs.properties(props)
-    filteringCharset = "UTF-8"
-    filesMatching("plugin.yml") {
-        expand(props)
+    repositories {
+        mavenCentral()
+        maven("https://repo.papermc.io/repository/maven-public/")
+        maven("https://maven.enginehub.org/repo/")
+        maven("https://maven.fabricmc.net/")
+        maven("https://maven.neoforged.net/releases")
+        maven("https://maven.parchmentmc.org")
     }
-}
-
-tasks.runServer {
-    minecraftVersion("1.21.1")
 }

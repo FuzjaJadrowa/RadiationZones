@@ -1,0 +1,37 @@
+plugins {
+    java
+    id("xyz.jpenilla.run-paper") version "2.3.1"
+}
+
+base {
+    archivesName.set(providers.gradleProperty("projectId").get())
+}
+
+dependencies {
+    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.10")
+}
+
+java {
+    val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
+    toolchain.languageVersion.set(JavaLanguageVersion.of(javaVersion))
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
+    options.encoding = "UTF-8"
+    options.release.set(javaVersion)
+}
+
+tasks.processResources {
+    val props = mapOf("version" to project.version)
+    inputs.properties(props)
+    filteringCharset = "UTF-8"
+    filesMatching("plugin.yml") {
+        expand(props)
+    }
+}
+
+tasks.runServer {
+    minecraftVersion("1.21.1")
+}

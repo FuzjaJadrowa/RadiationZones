@@ -1,4 +1,4 @@
-name: Paper Build
+name: Multi Build
 
 on:
   push:
@@ -23,4 +23,4 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build
-        run: ./gradlew clean build --no-daemon
+        run: ./gradlew clean :paper:build :fabric:build :neoforge:build --no-daemon
