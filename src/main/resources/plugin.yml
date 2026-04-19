@@ -1,0 +1,30 @@
+name: RadiationZones
+version: '${version}'
+main: pl.fuzjajadrowa.radiationzones.RadiationZones
+api-version: '1.21'
+load: STARTUP
+authors: [FuzjaJadrowa]
+description: Radiation zones with Lugol's iodine potions for Paper 1.21.1.
+website: https://fuzjajadrowa.pl/
+depend: [WorldGuard]
+
+commands:
+  radiation:
+    description: Plugin commands.
+    aliases: [radiacja]
+    permission: radiationzones.radiation
+    usage: /radiation <safe <radius>|potion <identifier>>
+
+permissions:
+  radiationzones.*:
+    description: Gives all possible permissions.
+    default: false
+    children:
+      radiationzones.radiation: true
+      radiationzones.admin: true
+  radiationzones.admin:
+    description: Gives access to admin notifications.
+    default: op
+  radiationzones.radiation:
+    description: Gives access to the /radiation command.
+    default: op
