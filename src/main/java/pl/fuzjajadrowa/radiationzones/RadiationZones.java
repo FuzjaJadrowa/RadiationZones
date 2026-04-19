@@ -25,7 +25,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import pl.fuzjajadrowa.radiationzones.lugolsiodine.LugolsIodineDisplay;
 import pl.fuzjajadrowa.radiationzones.lugolsiodine.LugolsIodineEffect;
 import pl.fuzjajadrowa.radiationzones.lugolsiodine.LugolsIodinePotion;
-import pl.fuzjajadrowa.radiationzones.lugolsiodine.MetricsHandler;
 import pl.fuzjajadrowa.radiationzones.nms.PaperNmsBridge;
 import pl.fuzjajadrowa.radiationzones.nms.RadiationNmsBridge;
 import pl.fuzjajadrowa.radiationzones.radiation.BarConfig;
@@ -66,8 +65,6 @@ public final class RadiationZones extends JavaPlugin {
 
     private final Map<String, LugolsIodinePotion> potions = new LinkedHashMap<>();
     private final Map<String, Radiation> activeRadiations = new LinkedHashMap<>();
-
-    private MetricsHandler metricsHandler;
 
     public static String colorize(String input) {
         return input == null ? null : ChatColor.translateAlternateColorCodes(COLOR_CODE, input);
@@ -121,8 +118,6 @@ public final class RadiationZones extends JavaPlugin {
         RadiationCommandHandler commandHandler = new RadiationCommandHandler(this.radiationNmsBridge, this.radiationFlag, this.potions::get, () -> this.potions.values().spliterator());
         commandHandler.register(this.getCommand("radiation"));
 
-        this.metricsHandler = new MetricsHandler(this, server);
-
         this.effect.enable();
         this.display.enable();
 
@@ -132,15 +127,10 @@ public final class RadiationZones extends JavaPlugin {
         this.activeRadiations.values().forEach(Radiation::enable);
         this.logLoaded("radiation", this.activeRadiations.keySet());
 
-        this.metricsHandler.start();
     }
 
     @Override
     public void onDisable() {
-        if (this.metricsHandler != null) {
-            this.metricsHandler.stop();
-        }
-
         this.activeRadiations.values().forEach(Radiation::disable);
         this.activeRadiations.clear();
 

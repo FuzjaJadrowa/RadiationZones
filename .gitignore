@@ -52,6 +52,7 @@ $RECYCLE.BIN/
 *.msp
 *.lnk
 .gradle
+.gradle-user/
 build/
 gradle-app.setting
 .gradletasknamecache
