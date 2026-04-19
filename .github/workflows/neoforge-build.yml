@@ -29,5 +29,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: neoforge-artifacts
-          path: neoforge/build/libs/*
+          path: |
+            neoforge/build/libs/*
+            !neoforge/build/libs/*-sources.jar
           if-no-files-found: error

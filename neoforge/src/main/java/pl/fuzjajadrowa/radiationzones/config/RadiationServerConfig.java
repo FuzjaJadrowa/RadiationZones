@@ -97,6 +97,14 @@ public final class RadiationServerConfig {
         return this.radiationCheckIntervalTicks;
     }
 
+    public synchronized void setEnableCommands(boolean enableCommands) {
+        this.enableCommands = enableCommands;
+    }
+
+    public synchronized void setRadiationCheckIntervalTicks(int radiationCheckIntervalTicks) {
+        this.radiationCheckIntervalTicks = Math.max(1, radiationCheckIntervalTicks);
+    }
+
     public synchronized Messages getMessages() {
         return this.messages;
     }
@@ -188,4 +196,5 @@ public final class RadiationServerConfig {
             return Math.abs(px - this.x) <= this.radius && Math.abs(pz - this.z) <= this.radius;
         }
     }
+
 }

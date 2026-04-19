@@ -5,12 +5,22 @@
   "name": "${mod_name}",
   "description": "${mod_description}",
   "authors": ["${mod_author}"],
+  "contact": {
+    "homepage": "https://fuzjajadrowa.pl",
+    "issues": "https://github.com/FuzjaJadrowa/RadiationZones/issues"
+  },
   "environment": "*",
   "icon": "assets/radiationzones/textures/icon.png",
   "entrypoints": {
     "main": [
       "pl.fuzjajadrowa.radiationzones.RadiationZones"
+    ],
+    "modmenu": [
+      "pl.fuzjajadrowa.radiationzones.client.RadiationZonesModMenu"
     ]
+  },
+  "suggests": {
+    "modmenu": "*"
   },
   "depends": {
     "fabricloader": ">=0.16.0",

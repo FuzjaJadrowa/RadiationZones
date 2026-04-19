@@ -29,5 +29,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fabric-artifacts
-          path: fabric/build/libs/*
+          path: |
+            fabric/build/libs/*
+            !fabric/build/libs/*-sources.jar
           if-no-files-found: error

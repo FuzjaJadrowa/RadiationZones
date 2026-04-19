@@ -15,6 +15,7 @@ dependencies {
     mappings("net.fabricmc:yarn:$minecraftVersion+build.3:v2")
     modImplementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
     modImplementation("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
+    modCompileOnly("com.terraformersmc:modmenu:11.0.3")
 }
 
 java {
