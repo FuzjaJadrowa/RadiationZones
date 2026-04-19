@@ -59,6 +59,11 @@ public class SafeZoneStore {
         this.save();
     }
 
+    public synchronized boolean hasZone(World world) {
+        Objects.requireNonNull(world, "world");
+        return this.zonesByWorld.containsKey(world.getName());
+    }
+
     public synchronized boolean isInSafeZone(Location location) {
         Objects.requireNonNull(location, "location");
         World world = location.getWorld();

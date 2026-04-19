@@ -1,7 +1,9 @@
 package pl.fuzjajadrowa.radiationzones.radiation;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Server;
+import org.bukkit.World;
 import org.bukkit.boss.BossBar;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -221,7 +223,14 @@ public class Radiation implements Listener {
                 return false;
             }
 
-            return !this.safeZoneStore.isInSafeZone(player.getLocation());
+            Location location = player.getLocation();
+            World world = location.getWorld();
+            if (world == null || !this.safeZoneStore.hasZone(world)) {
+                // Without any configured zone in a world, radiation is disabled there.
+                return false;
+            }
+
+            return !this.safeZoneStore.isInSafeZone(location);
         }
     }
 
