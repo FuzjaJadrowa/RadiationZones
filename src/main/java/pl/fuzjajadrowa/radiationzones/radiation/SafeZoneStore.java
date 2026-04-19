@@ -59,6 +59,15 @@ public class SafeZoneStore {
         this.save();
     }
 
+    public synchronized boolean removeZone(World world) {
+        Objects.requireNonNull(world, "world");
+        boolean removed = this.zonesByWorld.remove(world.getName()) != null;
+        if (removed) {
+            this.save();
+        }
+        return removed;
+    }
+
     public synchronized boolean hasZone(World world) {
         Objects.requireNonNull(world, "world");
         return this.zonesByWorld.containsKey(world.getName());

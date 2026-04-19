@@ -53,6 +53,7 @@ public class RadiationCommandHandler implements CommandExecutor, TabCompleter {
             return switch (args[0].toLowerCase(Locale.ROOT)) {
                 case "potion" -> this.onPotion(sender, label, args);
                 case "safe" -> this.onSafe(sender, label, args);
+                case "clear" -> this.onClear(sender);
                 default -> this.sendUsage(sender, command.getUsage());
             };
         }
@@ -161,6 +162,27 @@ public class RadiationCommandHandler implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean onClear(CommandSender sender) {
+        World world;
+        if (sender instanceof Player player) {
+            world = player.getWorld();
+        } else {
+            List<World> worlds = this.plugin.getServer().getWorlds();
+            if (worlds.isEmpty()) {
+                sender.sendMessage(ChatColor.RED + "No worlds are loaded.");
+                return true;
+            }
+            world = worlds.get(0);
+        }
+
+        if (this.safeZoneStore.removeZone(world)) {
+            sender.sendMessage(ChatColor.GREEN + "Removed safe zone in world '" + world.getName() + "'.");
+        } else {
+            sender.sendMessage(ChatColor.YELLOW + "No safe zone was configured in world '" + world.getName() + "'.");
+        }
+        return true;
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
@@ -169,7 +191,7 @@ public class RadiationCommandHandler implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             String subCommandInput = args[0].toLowerCase(Locale.ROOT);
-            return Stream.of("potion", "safe")
+            return Stream.of("potion", "safe", "clear")
                     .filter(subCommand -> subCommand.startsWith(subCommandInput))
                     .toList();
         }

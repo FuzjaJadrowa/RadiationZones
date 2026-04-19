@@ -11,7 +11,7 @@ commands:
   radiation:
     description: Plugin commands.
     permission: radiationzones.radiation
-    usage: /radiation <safe <radius>|potion <identifier>>
+    usage: /radiation <safe <radius>|clear|potion <identifier>>
 
 permissions:
   radiationzones.*:
