@@ -21,16 +21,13 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potion;
 import net.minecraft.world.item.alchemy.Potions;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import pl.fuzjajadrowa.radiationzones.client.RadiationConfigScreen;
 import pl.fuzjajadrowa.radiationzones.config.RadiationServerConfig;
 import pl.fuzjajadrowa.radiationzones.effect.LugolsIodineMobEffect;
 
@@ -68,10 +65,9 @@ public final class RadiationZones {
     private final Set<UUID> hadLugolEffect = new HashSet<>();
     private final Map<UUID, ServerBossEvent> barsByPlayer = new HashMap<>();
 
-    public RadiationZones(IEventBus modBus, ModContainer modContainer) {
+    public RadiationZones(IEventBus modBus) {
         EFFECTS.register(modBus);
         POTIONS.register(modBus);
-        modContainer.registerExtensionPoint(IConfigScreenFactory.class, (container, parent) -> new RadiationConfigScreen(parent));
 
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onRegisterBrewingRecipes);

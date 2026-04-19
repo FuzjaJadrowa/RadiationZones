@@ -14,13 +14,7 @@
   "entrypoints": {
     "main": [
       "pl.fuzjajadrowa.radiationzones.RadiationZones"
-    ],
-    "modmenu": [
-      "pl.fuzjajadrowa.radiationzones.client.RadiationZonesModMenu"
     ]
-  },
-  "suggests": {
-    "modmenu": "*"
   },
   "depends": {
     "fabricloader": ">=0.16.0",

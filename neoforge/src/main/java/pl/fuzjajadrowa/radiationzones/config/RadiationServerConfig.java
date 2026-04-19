@@ -97,14 +97,6 @@ public final class RadiationServerConfig {
         return this.radiationCheckIntervalTicks;
     }
 
-    public synchronized void setEnableCommands(boolean enableCommands) {
-        this.enableCommands = enableCommands;
-    }
-
-    public synchronized void setRadiationCheckIntervalTicks(int radiationCheckIntervalTicks) {
-        this.radiationCheckIntervalTicks = Math.max(1, radiationCheckIntervalTicks);
-    }
-
     public synchronized Messages getMessages() {
         return this.messages;
     }
