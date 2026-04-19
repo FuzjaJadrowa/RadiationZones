@@ -1,4 +1,4 @@
-name: Paper Build
+name: NeoForge Build
 
 on:
   push:
@@ -16,18 +16,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
           cache: gradle
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Paper
-        run: ./gradlew :paper:clean :paper:build --no-daemon
+      - name: Build NeoForge
+        run: ./gradlew :neoforge:clean :neoforge:build --no-daemon
 
-      - name: Upload Paper artifacts
+      - name: Upload NeoForge artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: paper-artifacts
-          path: paper/build/libs/*
+          name: neoforge-artifacts
+          path: neoforge/build/libs/*
           if-no-files-found: error

@@ -3,8 +3,8 @@ package pl.fuzjajadrowa.radiationzones.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -40,7 +40,7 @@ public final class RadiationServerConfig {
     }
 
     public static RadiationServerConfig loadOrCreate() {
-        Path configPath = FabricLoader.getInstance().getConfigDir().resolve("radiationzones-server.json");
+        Path configPath = FMLPaths.CONFIGDIR.get().resolve("radiationzones-server.json");
 
         if (Files.exists(configPath)) {
             try (Reader reader = Files.newBufferedReader(configPath)) {
@@ -78,7 +78,7 @@ public final class RadiationServerConfig {
     }
 
     public synchronized void save() {
-        Path configPath = FabricLoader.getInstance().getConfigDir().resolve("radiationzones-server.json");
+        Path configPath = FMLPaths.CONFIGDIR.get().resolve("radiationzones-server.json");
 
         try {
             Files.createDirectories(configPath.getParent());

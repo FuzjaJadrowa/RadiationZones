@@ -5,7 +5,8 @@ license="Apache-2.0"
 [[mods]]
 modId="${mod_id}"
 version="${version}"
-displayName="${mod_name} (NeoForge)"
+displayName="${mod_name}"
+logoFile="assets/radiationzones/textures/icon.png"
 authors="${mod_author}"
 description='''${mod_description}'''
 

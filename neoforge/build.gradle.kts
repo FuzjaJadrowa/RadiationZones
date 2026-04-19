@@ -1,13 +1,9 @@
 plugins {
-    java
+    id("net.neoforged.moddev") version "1.0.11"
 }
 
 base {
     archivesName.set("${providers.gradleProperty("projectId").get()}-neoforge")
-}
-
-dependencies {
-    compileOnly("net.neoforged:neoforge:${providers.gradleProperty("neoforgeVersion").get()}")
 }
 
 java {
@@ -20,6 +16,25 @@ tasks.withType<JavaCompile>().configureEach {
     val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
     options.release.set(javaVersion)
     options.encoding = "UTF-8"
+}
+
+neoForge {
+    version = providers.gradleProperty("neoforgeVersion").get()
+
+    runs {
+        create("client") {
+            client()
+        }
+        create("server") {
+            server()
+        }
+    }
+
+    mods {
+        create(providers.gradleProperty("modId").get()) {
+            sourceSet(sourceSets.main.get())
+        }
+    }
 }
 
 tasks.processResources {

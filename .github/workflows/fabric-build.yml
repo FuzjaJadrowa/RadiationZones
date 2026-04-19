@@ -1,4 +1,4 @@
-name: Paper Build
+name: Fabric Build
 
 on:
   push:
@@ -16,18 +16,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
           cache: gradle
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Paper
-        run: ./gradlew :paper:clean :paper:build --no-daemon
+      - name: Build Fabric
+        run: ./gradlew :fabric:clean :fabric:build --no-daemon
 
-      - name: Upload Paper artifacts
+      - name: Upload Fabric artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: paper-artifacts
-          path: paper/build/libs/*
+          name: fabric-artifacts
+          path: fabric/build/libs/*
           if-no-files-found: error
