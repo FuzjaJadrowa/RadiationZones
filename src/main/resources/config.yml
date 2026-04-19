@@ -56,12 +56,9 @@ lugols-iodine-potions:
     duration: 600
     # Color able broadcast message shown when a player consumes the potion, leave empty for no message.
     drink-message: '%player%&c drank %mixture%.'
-# Radiation zone options. You can define as many radiation types as you want.
-# Each one must have its own unique identifier, such as "default".
-# Use "radiation-type" flag to declare a region a specific radiation type.
+# Radiation zone options.
 radiations:
-  # The "default" radiation, used when "radiation-type" flag is not set.
-  # It is recommended to not remove or rename the "default" radiation.
+  # The "default" radiation uses standalone safe-zone data from zones.yml.
   default:
     # Boss bar shown on the screen when a player is in the zone.
     bar:
@@ -74,7 +71,7 @@ radiations:
       # segmented_6, segmented_10, segmented_12, segmented_20, solid
       style: solid
       # Additional effects given for the player, possible values:
-      # create_fog, darken_sky, play_boss_music
+      # create_fog, darken_sky
       flags: [darken_sky]
     # Effects given in the radiation zone.
     effects:

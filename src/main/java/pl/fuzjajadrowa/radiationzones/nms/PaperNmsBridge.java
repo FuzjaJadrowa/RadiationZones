@@ -2,7 +2,6 @@ package pl.fuzjajadrowa.radiationzones.nms;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.Server;
-import org.bukkit.World;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.meta.PotionMeta;
@@ -39,10 +38,5 @@ public class PaperNmsBridge implements RadiationNmsBridge {
     @Override
     public void unregisterLugolsIodinePotion(NamespacedKey potionKey) {
         this.server.getPotionBrewer().removePotionMix(potionKey);
-    }
-
-    @Override
-    public int getMinWorldHeight(World bukkitWorld) {
-        return bukkitWorld.getMinHeight();
     }
 }

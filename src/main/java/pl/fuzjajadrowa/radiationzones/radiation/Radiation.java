@@ -1,17 +1,7 @@
 package pl.fuzjajadrowa.radiationzones.radiation;
 
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldedit.util.Location;
-import com.sk89q.worldguard.LocalPlayer;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
-import com.sk89q.worldguard.internal.platform.WorldGuardPlatform;
-import com.sk89q.worldguard.protection.ApplicableRegionSet;
-import com.sk89q.worldguard.protection.flags.Flag;
-import com.sk89q.worldguard.protection.regions.RegionContainer;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
-import org.bukkit.World;
 import org.bukkit.boss.BossBar;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -29,13 +19,14 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import pl.fuzjajadrowa.radiationzones.RadiationZones;
-import pl.fuzjajadrowa.radiationzones.nms.RadiationNmsBridge;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -45,14 +36,17 @@ import java.util.logging.Logger;
 
 public class Radiation implements Listener {
     static final Logger logger = Logger.getLogger(Radiation.class.getName());
+    private static final int EXIT_FADE_SECONDS = 5;
 
     private final Set<UUID> affectedPlayers = new HashSet<>(128);
+    private final Set<UUID> playersInsideZone = new HashSet<>(128);
+    private final Map<UUID, Integer> exitFadeByPlayer = new HashMap<>(128);
+    private final Map<UUID, BossBar> bossBars = new HashMap<>(128);
 
     private final Plugin plugin;
     private final Matcher matcher;
     private final Config config;
 
-    private BossBar bossBar;
     private Task task;
 
     public Radiation(Plugin plugin, Matcher matcher, Config config) {
@@ -62,11 +56,9 @@ public class Radiation implements Listener {
     }
 
     public void enable() {
-        Server server = this.plugin.getServer();
-        this.bossBar = this.config.bar().create(server, ChatColor.DARK_RED);
         this.task = new Task();
         this.task.runTaskTimer(this.plugin, 20L, 20L);
-        server.getPluginManager().registerEvents(this, this.plugin);
+        this.plugin.getServer().getPluginManager().registerEvents(this, this.plugin);
     }
 
     public void disable() {
@@ -76,15 +68,35 @@ public class Radiation implements Listener {
             this.task.cancel();
         }
 
-        if (this.bossBar != null) {
-            this.bossBar.removeAll();
-        }
-
+        this.bossBars.values().forEach(BossBar::removeAll);
+        this.bossBars.clear();
+        this.playersInsideZone.clear();
+        this.exitFadeByPlayer.clear();
         this.affectedPlayers.clear();
     }
 
-    private void addBossBar(Player player) {
-        this.bossBar.addPlayer(player);
+    private BossBar getOrCreateBossBar(Player player) {
+        UUID playerId = player.getUniqueId();
+        return this.bossBars.computeIfAbsent(playerId, ignored -> {
+            BossBar bossBar = this.config.bar().create(this.plugin.getServer(), ChatColor.DARK_RED);
+            bossBar.addPlayer(player);
+            return bossBar;
+        });
+    }
+
+    private void setBossBar(Player player, double progress) {
+        BossBar bossBar = this.getOrCreateBossBar(player);
+        if (!bossBar.getPlayers().contains(player)) {
+            bossBar.addPlayer(player);
+        }
+        bossBar.setProgress(Math.max(0D, Math.min(1D, progress)));
+    }
+
+    private void removeBossBar(Player player) {
+        BossBar bossBar = this.bossBars.remove(player.getUniqueId());
+        if (bossBar != null) {
+            bossBar.removeAll();
+        }
     }
 
     private void broadcastEnter(Player player) {
@@ -112,12 +124,16 @@ public class Radiation implements Listener {
     }
 
     public boolean removeAffectedPlayer(Player player, boolean removeBossBar) {
-        boolean ok = this.affectedPlayers.remove(player.getUniqueId());
+        UUID playerId = player.getUniqueId();
+        boolean changed = this.affectedPlayers.remove(playerId);
+        this.playersInsideZone.remove(playerId);
+        this.exitFadeByPlayer.remove(playerId);
+
         if (removeBossBar) {
-            this.bossBar.removePlayer(player);
+            this.removeBossBar(player);
         }
 
-        return ok;
+        return changed;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -132,31 +148,56 @@ public class Radiation implements Listener {
             Iterable<PotionEffect> effects = config.effects();
 
             server.getOnlinePlayers().forEach(player -> {
-                if (matcher.test(player)) {
+                UUID playerId = player.getUniqueId();
+                boolean inside = matcher.test(player);
+                if (inside) {
+                    boolean wasInside = playersInsideZone.contains(playerId);
+                    playersInsideZone.add(playerId);
+                    exitFadeByPlayer.remove(playerId);
+
                     RadiationEvent event = new RadiationEvent(player, Radiation.this);
                     server.getPluginManager().callEvent(event);
 
-                    boolean showBossBar = event.shouldShowWarning();
-                    boolean cancelled = event.isCancelled();
-                    boolean alreadyOnBar = bossBar.getPlayers().contains(player);
-
-                    if (!cancelled) {
+                    if (!event.isCancelled()) {
                         for (PotionEffect effect : effects) {
                             player.addPotionEffect(effect, true);
                         }
-                        affectedPlayers.add(player.getUniqueId());
+                        affectedPlayers.add(playerId);
+                    } else {
+                        affectedPlayers.remove(playerId);
                     }
 
-                    if (showBossBar) {
-                        addBossBar(player);
-                        if (!alreadyOnBar) {
+                    if (event.shouldShowWarning()) {
+                        setBossBar(player, 1D);
+                        if (!wasInside) {
                             broadcastEnter(player);
                         }
                     } else {
-                        bossBar.removePlayer(player);
+                        removeBossBar(player);
                     }
+                    return;
+                }
+
+                playersInsideZone.remove(playerId);
+                if (!affectedPlayers.contains(playerId)) {
+                    exitFadeByPlayer.remove(playerId);
+                    removeBossBar(player);
+                    return;
+                }
+
+                int remaining = exitFadeByPlayer.getOrDefault(playerId, EXIT_FADE_SECONDS);
+                for (PotionEffect effect : effects) {
+                    player.addPotionEffect(effect, true);
+                }
+
+                setBossBar(player, (double) remaining / EXIT_FADE_SECONDS);
+                remaining--;
+                if (remaining <= 0) {
+                    affectedPlayers.remove(playerId);
+                    exitFadeByPlayer.remove(playerId);
+                    removeBossBar(player);
                 } else {
-                    removeAffectedPlayer(player, true);
+                    exitFadeByPlayer.put(playerId, remaining);
                 }
             });
         }
@@ -165,63 +206,22 @@ public class Radiation implements Listener {
     public interface Matcher extends Predicate<Player> {
     }
 
-    public interface WorldGuardMatcher extends Matcher {
-        @Override
-        default boolean test(Player player) {
-            RegionContainer regionContainer = this.getRegionContainer();
-            return regionContainer != null && this.test(player, regionContainer);
-        }
+    public static class SafeZoneMatcher implements Matcher {
+        private final SafeZoneStore safeZoneStore;
 
-        default RegionContainer getRegionContainer() {
-            WorldGuardPlatform platform = WorldGuard.getInstance().getPlatform();
-            return platform != null ? platform.getRegionContainer() : null;
-        }
-
-        boolean test(Player player, RegionContainer regionContainer);
-    }
-
-    public static class FlagMatcher implements WorldGuardMatcher {
-        private final RadiationNmsBridge nmsBridge;
-        private final Flag<Boolean> isRadioactiveFlag;
-        private final Flag<String> radiationTypeFlag;
-        private final Set<String> acceptedRadiationTypes;
-
-        public FlagMatcher(RadiationNmsBridge nmsBridge, Flag<Boolean> isRadioactiveFlag, Flag<String> radiationTypeFlag, Set<String> acceptedRadiationTypes) {
-            this.nmsBridge = Objects.requireNonNull(nmsBridge, "nmsBridge");
-            this.isRadioactiveFlag = Objects.requireNonNull(isRadioactiveFlag, "isRadioactiveFlag");
-            this.radiationTypeFlag = Objects.requireNonNull(radiationTypeFlag, "radiationTypeFlag");
-            this.acceptedRadiationTypes = Objects.requireNonNull(acceptedRadiationTypes, "acceptedRadiationTypes");
+        public SafeZoneMatcher(SafeZoneStore safeZoneStore) {
+            this.safeZoneStore = Objects.requireNonNull(safeZoneStore, "safeZoneStore");
         }
 
         @Override
-        public boolean test(Player player, RegionContainer regionContainer) {
-            org.bukkit.Location bukkitLocation = player.getLocation();
-            World world = player.getWorld();
-            int minY = this.nmsBridge.getMinWorldHeight(world);
-            int maxY = world.getMaxHeight() - 1;
-
-            Location location = BukkitAdapter.adapt(bukkitLocation);
-            location = location.setY(Math.max(minY, Math.min(maxY, location.getY())));
-
-            ApplicableRegionSet regions = regionContainer.createQuery().getApplicableRegions(location);
-            LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(player);
-
-            Boolean radioactive = regions.queryValue(localPlayer, this.isRadioactiveFlag);
-            if (!Boolean.TRUE.equals(radioactive)) {
-                return false;
-            }
-
-            String radiationId = regions.queryValue(localPlayer, this.radiationTypeFlag);
-            if (radiationId == null || radiationId.isBlank()) {
-                radiationId = Config.DEFAULT_ID;
-            }
-
+        public boolean test(Player player) {
+            String radiationId = Config.DEFAULT_ID;
             Permission permission = new Permission("radiationzones.immune." + radiationId, PermissionDefault.FALSE);
             if (player.hasPermission(permission)) {
                 return false;
             }
 
-            return this.acceptedRadiationTypes.contains(radiationId);
+            return !this.safeZoneStore.isInSafeZone(player.getLocation());
         }
     }
 

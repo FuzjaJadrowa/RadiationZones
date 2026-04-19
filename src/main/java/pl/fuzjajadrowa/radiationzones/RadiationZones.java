@@ -1,19 +1,7 @@
 package pl.fuzjajadrowa.radiationzones;
 
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.protection.flags.BooleanFlag;
-import com.sk89q.worldguard.protection.flags.Flag;
-import com.sk89q.worldguard.protection.flags.RegionGroup;
-import com.sk89q.worldguard.protection.flags.StringFlag;
-import com.sk89q.worldguard.protection.flags.registry.FlagRegistry;
-import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.sk89q.worldguard.protection.regions.GlobalProtectedRegion;
-import com.sk89q.worldguard.protection.regions.ProtectedRegion;
-import com.sk89q.worldguard.protection.regions.RegionContainer;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
-import org.bukkit.World;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
@@ -30,6 +18,7 @@ import pl.fuzjajadrowa.radiationzones.nms.RadiationNmsBridge;
 import pl.fuzjajadrowa.radiationzones.radiation.BarConfig;
 import pl.fuzjajadrowa.radiationzones.radiation.Radiation;
 import pl.fuzjajadrowa.radiationzones.radiation.RadiationCommandHandler;
+import pl.fuzjajadrowa.radiationzones.radiation.SafeZoneStore;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,7 +30,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -54,14 +42,9 @@ public final class RadiationZones extends JavaPlugin {
     private static final String CONFIG_VERSION_KEY = "file-version-dont-touch";
     private static final int CONFIG_VERSION = 1;
 
-    private static final Flag<Boolean> RADIATION_FLAG = new BooleanFlag("radiation", RegionGroup.NON_MEMBERS);
-    private static final Flag<String> RADIATION_TYPE_FLAG = new StringFlag("radiation-type");
-
-    private Flag<Boolean> radiationFlag;
-    private Flag<String> radiationTypeFlag;
-
     private RadiationNmsBridge radiationNmsBridge;
     private Config config;
+    private SafeZoneStore safeZoneStore;
 
     private LugolsIodineEffect effect;
     private LugolsIodineDisplay display;
@@ -71,17 +54,6 @@ public final class RadiationZones extends JavaPlugin {
 
     public static String colorize(String input) {
         return input == null ? null : ChatColor.translateAlternateColorCodes(COLOR_CODE, input);
-    }
-
-    @Override
-    public void onLoad() {
-        FlagRegistry flagRegistry = WorldGuard.getInstance().getFlagRegistry();
-        if (flagRegistry == null) {
-            throw new IllegalStateException("WorldGuard flag registry is unavailable.");
-        }
-
-        this.radiationFlag = this.getOrCreateFlag(flagRegistry, RADIATION_FLAG);
-        this.radiationTypeFlag = this.getOrCreateFlag(flagRegistry, RADIATION_TYPE_FLAG);
     }
 
     @Override
@@ -106,6 +78,9 @@ public final class RadiationZones extends JavaPlugin {
             return;
         }
 
+        this.safeZoneStore = new SafeZoneStore(this);
+        this.safeZoneStore.load();
+
         this.effect = new LugolsIodineEffect(this);
         this.display = new LugolsIodineDisplay(this, this.effect, this.config.lugolsIodineBars());
 
@@ -115,11 +90,22 @@ public final class RadiationZones extends JavaPlugin {
 
         for (Radiation.Config radiationConfig : this.config.radiations()) {
             String id = radiationConfig.id();
-            Radiation.Matcher matcher = new Radiation.FlagMatcher(this.radiationNmsBridge, this.radiationFlag, this.radiationTypeFlag, Collections.singleton(id));
+            if (!Radiation.Config.DEFAULT_ID.equals(id)) {
+                logger.warning("Skipping unsupported radiation id '" + id + "'. Standalone mode currently supports only '" +
+                        Radiation.Config.DEFAULT_ID + "'.");
+                continue;
+            }
+
+            Radiation.Matcher matcher = new Radiation.SafeZoneMatcher(this.safeZoneStore);
             this.activeRadiations.put(id, new Radiation(this, matcher, radiationConfig));
         }
 
-        RadiationCommandHandler commandHandler = new RadiationCommandHandler(this.radiationNmsBridge, this.radiationFlag, this.potions::get, () -> this.potions.values().spliterator());
+        RadiationCommandHandler commandHandler = new RadiationCommandHandler(
+                this,
+                this.safeZoneStore,
+                this.potions::get,
+                () -> this.potions.values().spliterator()
+        );
         commandHandler.register(this.getCommand("radiation"));
 
         this.effect.enable();
@@ -130,7 +116,6 @@ public final class RadiationZones extends JavaPlugin {
 
         this.activeRadiations.values().forEach(Radiation::enable);
         this.logLoaded("radiation", this.activeRadiations.keySet());
-
     }
 
     @Override
@@ -165,17 +150,6 @@ public final class RadiationZones extends JavaPlugin {
         Set<String> sorted = new TreeSet<>(Comparator.naturalOrder());
         sorted.addAll(ids);
         logger.info("Loaded and enabled " + sorted.size() + " " + noun + "(s): " + String.join(", ", sorted));
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> Flag<T> getOrCreateFlag(FlagRegistry flagRegistry, Flag<T> defaultFlag) {
-        Flag<T> existing = (Flag<T>) flagRegistry.get(defaultFlag.getName());
-        if (existing != null) {
-            return existing;
-        }
-
-        flagRegistry.register(defaultFlag);
-        return defaultFlag;
     }
 
     private int resolveProtocol(ConfigurationSection section) {
@@ -225,15 +199,6 @@ public final class RadiationZones extends JavaPlugin {
             section.set("radiation.effects.hunger.has-icon", false);
 
             section.set("radiation.escape-message", "%player%" + ChatColor.RED + " uciekl/a do strefy radiacji.");
-
-            String legacyRegionId = section.getString("region-name", "km_safe_from_radiation");
-            AtomicBoolean logged = new AtomicBoolean();
-            section.getStringList("world-names").forEach(worldName -> {
-                if (logged.compareAndSet(false, true)) {
-                    logger.warning("Legacy migration mode enabled for region-name config. Remove old config.yml after successful migration.");
-                }
-                this.migrateFromRegionId(worldName, legacyRegionId);
-            });
         }
 
         if (protocol < 1) {
@@ -292,49 +257,6 @@ public final class RadiationZones extends JavaPlugin {
         section.set(CONFIG_VERSION_KEY, CONFIG_VERSION);
         this.saveConfig();
         return true;
-    }
-
-    private void migrateFromRegionId(String worldName, String regionId) {
-        String error = "Could not migrate region " + regionId + " in world " + worldName + ": ";
-
-        World world = this.getServer().getWorld(worldName);
-        if (world == null) {
-            logger.warning(error + "world is not loaded.");
-            return;
-        }
-
-        Radiation.WorldGuardMatcher matcher = (player, regionContainer) -> {
-            throw new UnsupportedOperationException();
-        };
-
-        RegionContainer regionContainer = matcher.getRegionContainer();
-        if (regionContainer == null) {
-            logger.warning(error + "region container unavailable.");
-            return;
-        }
-
-        RegionManager regionManager = regionContainer.get(BukkitAdapter.adapt(world));
-        if (regionManager == null) {
-            logger.warning(error + "region manager unavailable.");
-            return;
-        }
-
-        ProtectedRegion legacyRegion = regionManager.getRegion(regionId);
-        if (legacyRegion == null) {
-            logger.warning(error + "legacy region not found.");
-            return;
-        }
-
-        legacyRegion.setFlag(this.radiationFlag, false);
-
-        ProtectedRegion global = regionManager.getRegion("__global__");
-        if (global == null) {
-            global = new GlobalProtectedRegion("__global__");
-            regionManager.addRegion(global);
-        }
-
-        global.setFlag(this.radiationFlag, true);
-        logger.info("Region " + regionId + " in world " + worldName + " migrated to flag-based mode.");
     }
 
     public static class Config {

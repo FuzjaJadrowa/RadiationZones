@@ -6,7 +6,6 @@ load: STARTUP
 authors: [FuzjaJadrowa]
 description: Radiation zones with Lugol's iodine potions for Paper 1.21.1.
 website: https://fuzjajadrowa.pl
-depend: [WorldGuard]
 
 commands:
   radiation:
