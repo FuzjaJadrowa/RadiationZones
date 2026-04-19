@@ -3,8 +3,12 @@ plugins {
     id("xyz.jpenilla.run-paper") version "2.3.1"
 }
 
-group = "pl.fuzjajadrowa"
-version = "1.0.0"
+group = providers.gradleProperty("groupId").get()
+version = providers.gradleProperty("projectVersion").get()
+
+base {
+    archivesName.set(providers.gradleProperty("projectId").get())
+}
 
 repositories {
     mavenCentral()
@@ -18,12 +22,14 @@ dependencies {
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
+    toolchain.languageVersion.set(JavaLanguageVersion.of(javaVersion))
 }
 
 tasks.withType<JavaCompile>().configureEach {
+    val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
     options.encoding = "UTF-8"
-    options.release.set(21)
+    options.release.set(javaVersion)
 }
 
 tasks.processResources {

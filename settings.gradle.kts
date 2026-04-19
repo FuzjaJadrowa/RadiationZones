@@ -1,1 +1,1 @@
-rootProject.name = "RadiationZones"
+rootProject.name = providers.gradleProperty("rootProjectName").get()

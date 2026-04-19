@@ -31,7 +31,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -171,7 +170,7 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
         logger.info(player.getName() + " has consumed " + name + " with a duration of " + duration.getSeconds() + " seconds");
 
         this.config.drinkMessage().ifPresent(rawMessage -> {
-            String message = ChatColor.RED + MessageFormat.format(rawMessage, player.getDisplayName() + ChatColor.RESET, name);
+            String message = ChatColor.RED + applyAliases(rawMessage, player.getDisplayName() + ChatColor.RESET, name, null);
             for (Player online : this.plugin.getServer().getOnlinePlayers()) {
                 if (online.canSee(player)) {
                     online.sendMessage(message);
@@ -248,7 +247,8 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
         this.config.color().ifPresent(potionMeta::setColor);
         potionMeta.addItemFlags(ItemFlag.HIDE_ITEM_SPECIFICS);
         potionMeta.setDisplayName(ChatColor.AQUA + this.config.name());
-        potionMeta.setLore(Collections.singletonList(ChatColor.BLUE + MessageFormat.format(this.config.description(), formattedDuration)));
+        String description = applyAliases(this.config.description(), null, null, formattedDuration);
+        potionMeta.setLore(Collections.singletonList(ChatColor.BLUE + description));
 
         PersistentDataContainer container = potionMeta.getPersistentDataContainer();
         container.set(this.potionIdKey, PersistentDataType.STRING, this.config.id());
@@ -301,6 +301,20 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
         long secondsLeft = seconds - (TimeUnit.MINUTES.toSeconds(minutes));
 
         return (minutes < 10 ? "0" : "") + minutes + ":" + (secondsLeft < 10 ? "0" : "") + secondsLeft;
+    }
+
+    private static String applyAliases(String input, String player, String mixture, String time) {
+        String output = input;
+        if (player != null) {
+            output = output.replace("%player%", player);
+        }
+        if (mixture != null) {
+            output = output.replace("%mixture%", mixture);
+        }
+        if (time != null) {
+            output = output.replace("%time%", time);
+        }
+        return output;
     }
 
     static class BrewingStandWindow {
@@ -377,7 +391,7 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
                 throw new InvalidConfigurationException("Invalid potion color.", exception);
             }
 
-            this.description = Objects.requireNonNull(section.getString("description", "Radiation resistance ({0})"));
+            this.description = Objects.requireNonNull(section.getString("description", "Radiation resistance (%time%)"));
 
             List<String> configuredRadiationIds = section.getStringList("radiation-ids");
             this.radiationIds = configuredRadiationIds.isEmpty() ? null : configuredRadiationIds;

@@ -60,7 +60,11 @@ public class BarConfig {
         List<BarFlag> flags = new ArrayList<>();
         for (String flagName : section.getStringList("flags")) {
             try {
-                flags.add(BarFlag.valueOf(flagName.toUpperCase()));
+                BarFlag parsed = BarFlag.valueOf(flagName.toUpperCase());
+                if (parsed == BarFlag.PLAY_BOSS_MUSIC) {
+                    throw new InvalidConfigurationException("Unsupported bar flag: " + flagName);
+                }
+                flags.add(parsed);
             } catch (IllegalArgumentException e) {
                 throw new InvalidConfigurationException("Unknown bar flag: " + flagName);
             }

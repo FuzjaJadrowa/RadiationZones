@@ -31,7 +31,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import pl.fuzjajadrowa.radiationzones.RadiationZones;
 import pl.fuzjajadrowa.radiationzones.nms.RadiationNmsBridge;
 
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -93,7 +92,9 @@ public class Radiation implements Listener {
         logger.info(player.getName() + " has entered '" + id + "' radiation zone at " + player.getLocation());
 
         this.config.enterMessage().ifPresent(rawMessage -> {
-            String message = ChatColor.RED + MessageFormat.format(rawMessage, player.getDisplayName() + ChatColor.RESET, id);
+            String message = ChatColor.RED + rawMessage
+                    .replace("%player%", player.getDisplayName() + ChatColor.RESET)
+                    .replace("%radiation%", id);
             for (Player online : this.plugin.getServer().getOnlinePlayers()) {
                 if (online.canSee(player)) {
                     online.sendMessage(message);

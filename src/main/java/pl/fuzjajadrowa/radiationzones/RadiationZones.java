@@ -50,6 +50,9 @@ public final class RadiationZones extends JavaPlugin {
 
     private static final char COLOR_CODE = '&';
     private static final int CURRENT_PROTOCOL_VERSION = 4;
+    private static final String LEGACY_PROTOCOL_KEY = "file-protocol-version-dont-touch";
+    private static final String CONFIG_VERSION_KEY = "file-version-dont-touch";
+    private static final int CONFIG_VERSION = 1;
 
     private static final Flag<Boolean> RADIATION_FLAG = new BooleanFlag("radiation", RegionGroup.NON_MEMBERS);
     private static final Flag<String> RADIATION_TYPE_FLAG = new StringFlag("radiation-type");
@@ -89,7 +92,8 @@ public final class RadiationZones extends JavaPlugin {
         this.radiationNmsBridge = new PaperNmsBridge(server);
 
         FileConfiguration rawConfig = this.getConfig();
-        if (!this.migrate(rawConfig, rawConfig.getInt("file-protocol-version-dont-touch", -1))) {
+        int protocol = this.resolveProtocol(rawConfig);
+        if (!this.migrate(rawConfig, protocol)) {
             this.setEnabled(false);
             return;
         }
@@ -174,6 +178,18 @@ public final class RadiationZones extends JavaPlugin {
         return defaultFlag;
     }
 
+    private int resolveProtocol(ConfigurationSection section) {
+        if (section.contains(LEGACY_PROTOCOL_KEY)) {
+            return section.getInt(LEGACY_PROTOCOL_KEY, -1);
+        }
+
+        if (section.contains(CONFIG_VERSION_KEY)) {
+            return CURRENT_PROTOCOL_VERSION;
+        }
+
+        return -1;
+    }
+
     private boolean migrate(ConfigurationSection section, int protocol) {
         Objects.requireNonNull(section, "section");
 
@@ -189,9 +205,9 @@ public final class RadiationZones extends JavaPlugin {
             section.set("lugols-iodine-bar.flags", Collections.emptyList());
 
             section.set("lugols-iodine-potion.name", "Plyn Lugola");
-            section.set("lugols-iodine-potion.description", "Odpornosc na promieniowanie ({0})");
+            section.set("lugols-iodine-potion.description", "Odpornosc na promieniowanie (%time%)");
             section.set("lugols-iodine-potion.duration", TimeUnit.MINUTES.toSeconds(section.getInt("potion-duration", 10)));
-            section.set("lugols-iodine-potion.drink-message", "{0}" + ChatColor.RED + " wypil/a {1}.");
+            section.set("lugols-iodine-potion.drink-message", "%player%" + ChatColor.RED + " wypil/a %mixture%.");
 
             section.set("radiation.bar.title", "Strefa radiacji");
             section.set("radiation.bar.color", BarColor.RED.name());
@@ -208,7 +224,7 @@ public final class RadiationZones extends JavaPlugin {
             section.set("radiation.effects.hunger.has-particles", false);
             section.set("radiation.effects.hunger.has-icon", false);
 
-            section.set("radiation.escape-message", "{0}" + ChatColor.RED + " uciekl/a do strefy radiacji.");
+            section.set("radiation.escape-message", "%player%" + ChatColor.RED + " uciekl/a do strefy radiacji.");
 
             String legacyRegionId = section.getString("region-name", "km_safe_from_radiation");
             AtomicBoolean logged = new AtomicBoolean();
@@ -272,7 +288,8 @@ public final class RadiationZones extends JavaPlugin {
             section.set("lugols-iodine-potions.default", defaultPotion);
         }
 
-        section.set("file-protocol-version-dont-touch", CURRENT_PROTOCOL_VERSION);
+        section.set(LEGACY_PROTOCOL_KEY, null);
+        section.set(CONFIG_VERSION_KEY, CONFIG_VERSION);
         this.saveConfig();
         return true;
     }
