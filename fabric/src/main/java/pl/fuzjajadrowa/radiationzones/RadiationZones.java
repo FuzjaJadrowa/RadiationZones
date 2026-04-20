@@ -24,6 +24,8 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import pl.fuzjajadrowa.radiationzones.config.RadiationServerConfig;
 import pl.fuzjajadrowa.radiationzones.effect.LugolsIodineStatusEffect;
+import pl.fuzjajadrowa.radiationzones.util.ColorUtil;
+import net.fabricmc.loader.api.FabricLoader;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,12 +57,12 @@ public final class RadiationZones implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        this.config = RadiationServerConfig.loadOrCreate();
+        this.config = RadiationServerConfig.loadOrCreate(FabricLoader.getInstance().getConfigDir());
 
         this.lugolsEffect = Registry.registerReference(
                 Registries.STATUS_EFFECT,
                 LUGOLS_EFFECT_ID,
-                new LugolsIodineStatusEffect(this.parseHexColor(this.config.getLugol().color(), 0x197d14))
+                new LugolsIodineStatusEffect(ColorUtil.parseHexColor(this.config.getLugol().color(), 0x197d14))
         );
 
         this.lugolsPotion = Registry.registerReference(
@@ -102,7 +104,8 @@ public final class RadiationZones implements ModInitializer {
 
         ServerWorld world = source.getWorld();
         String dimensionId = world.getRegistryKey().getValue().toString();
-        this.config.setSafeZone(dimensionId, BlockPos.ofFloored(source.getPosition()), radius);
+        BlockPos center = BlockPos.ofFloored(source.getPosition());
+        this.config.setSafeZone(dimensionId, center.getX(), center.getY(), center.getZ(), radius);
         source.sendFeedback(() -> Text.literal("Saved safe zone for " + dimensionId + " with radius " + radius + "."), true);
         return 1;
     }
@@ -288,23 +291,6 @@ public final class RadiationZones implements ModInitializer {
         }
 
         return Identifier.tryParse("minecraft:" + raw.toLowerCase(Locale.ROOT));
-    }
-
-    private int parseHexColor(String input, int fallback) {
-        if (input == null) {
-            return fallback;
-        }
-
-        String normalized = input.trim();
-        if (normalized.startsWith("#")) {
-            normalized = normalized.substring(1);
-        }
-
-        try {
-            return Integer.parseInt(normalized, 16);
-        } catch (NumberFormatException ignored) {
-            return fallback;
-        }
     }
 
     private BossBar.Color parseBarColor(String input) {

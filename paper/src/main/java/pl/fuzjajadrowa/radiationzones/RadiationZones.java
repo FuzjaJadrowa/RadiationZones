@@ -37,10 +37,9 @@ public final class RadiationZones extends JavaPlugin {
     static final Logger logger = Logger.getLogger(RadiationZones.class.getName());
 
     private static final char COLOR_CODE = '&';
-    private static final int CURRENT_PROTOCOL_VERSION = 4;
     private static final String LEGACY_PROTOCOL_KEY = "file-protocol-version-dont-touch";
     private static final String CONFIG_VERSION_KEY = "file-version-dont-touch";
-    private static final int CONFIG_VERSION = 1;
+    private static final int CONFIG_VERSION = 4;
 
     private RadiationNmsBridge radiationNmsBridge;
     private Config config;
@@ -64,8 +63,8 @@ public final class RadiationZones extends JavaPlugin {
         this.radiationNmsBridge = new PaperNmsBridge(server);
 
         FileConfiguration rawConfig = this.getConfig();
-        int protocol = this.resolveProtocol(rawConfig);
-        if (!this.migrate(rawConfig, protocol)) {
+        int configVersion = this.resolveConfigVersion(rawConfig);
+        if (!this.migrate(rawConfig, configVersion)) {
             this.setEnabled(false);
             return;
         }
@@ -152,27 +151,27 @@ public final class RadiationZones extends JavaPlugin {
         logger.info("Loaded and enabled " + sorted.size() + " " + noun + "(s): " + String.join(", ", sorted));
     }
 
-    private int resolveProtocol(ConfigurationSection section) {
+    private int resolveConfigVersion(ConfigurationSection section) {
         if (section.contains(LEGACY_PROTOCOL_KEY)) {
             return section.getInt(LEGACY_PROTOCOL_KEY, -1);
         }
 
         if (section.contains(CONFIG_VERSION_KEY)) {
-            return CURRENT_PROTOCOL_VERSION;
+            return section.getInt(CONFIG_VERSION_KEY, -1);
         }
 
         return -1;
     }
 
-    private boolean migrate(ConfigurationSection section, int protocol) {
+    private boolean migrate(ConfigurationSection section, int configVersion) {
         Objects.requireNonNull(section, "section");
 
-        if (protocol > CURRENT_PROTOCOL_VERSION) {
-            logger.severe("Config protocol version " + protocol + " is newer than supported by this build.");
+        if (configVersion > CONFIG_VERSION) {
+            logger.severe("Config version " + configVersion + " is newer than supported by this build.");
             return false;
         }
 
-        if (protocol < 0) {
+        if (configVersion < 0) {
             section.set("lugols-iodine-bar.title", "Dzialanie Plynu Lugola");
             section.set("lugols-iodine-bar.color", BarColor.GREEN.name());
             section.set("lugols-iodine-bar.style", BarStyle.SEGMENTED_20.name());
@@ -201,14 +200,14 @@ public final class RadiationZones extends JavaPlugin {
             section.set("radiation.escape-message", "%player%" + ChatColor.RED + " uciekl/a do strefy radiacji.");
         }
 
-        if (protocol < 1) {
+        if (configVersion < 1) {
             section.set("lugols-iodine-potion.recipe.enabled", true);
             section.set("lugols-iodine-potion.recipe.base-potion", LugolsIodinePotion.Config.Recipe.DEFAULT_BASE_POTION.name());
             section.set("lugols-iodine-potion.recipe.ingredient", LugolsIodinePotion.Config.Recipe.DEFAULT_INGREDIENT.getKey().getKey());
             section.set("lugols-iodine-potion.color", null);
         }
 
-        if (protocol < 2) {
+        if (configVersion < 2) {
             MemoryConfiguration defaultRadiation = new MemoryConfiguration();
             ConfigurationSection oldRadiation = section.getConfigurationSection("radiation");
             if (oldRadiation != null) {
@@ -219,7 +218,7 @@ public final class RadiationZones extends JavaPlugin {
             section.set("radiations.default", defaultRadiation);
         }
 
-        if (protocol < 3) {
+        if (configVersion < 3) {
             ConfigurationSection radiations = section.getConfigurationSection("radiations");
             if (radiations != null) {
                 for (String key : radiations.getKeys(false)) {
@@ -231,7 +230,7 @@ public final class RadiationZones extends JavaPlugin {
             }
         }
 
-        if (protocol < 4) {
+        if (configVersion < 4) {
             MemoryConfiguration defaultBar = new MemoryConfiguration();
             ConfigurationSection oldBar = section.getConfigurationSection("lugols-iodine-bar");
             if (oldBar != null) {

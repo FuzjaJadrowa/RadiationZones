@@ -4,7 +4,7 @@ plugins {
 }
 
 base {
-    archivesName.set(providers.gradleProperty("projectId").get())
+    archivesName.set("${providers.gradleProperty("projectId").get()}-paper")
 }
 
 dependencies {

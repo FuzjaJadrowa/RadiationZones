@@ -9,4 +9,4 @@ pluginManagement {
 
 rootProject.name = providers.gradleProperty("rootProjectName").get()
 
-include("paper", "fabric", "neoforge")
+include("common", "paper", "fabric", "neoforge")

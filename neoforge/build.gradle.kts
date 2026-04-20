@@ -7,9 +7,12 @@ base {
 }
 
 java {
-    withSourcesJar()
     val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
     toolchain.languageVersion.set(JavaLanguageVersion.of(javaVersion))
+}
+
+dependencies {
+    implementation(project(":common"))
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -48,4 +51,10 @@ tasks.processResources {
     )
     inputs.properties(props)
     filesMatching("META-INF/neoforge.mods.toml") { expand(props) }
+}
+
+tasks.named<Jar>("jar") {
+    dependsOn(":common:classes")
+    from(project(":common").layout.buildDirectory.dir("classes/java/main"))
+    from(project(":common").layout.buildDirectory.dir("resources/main"))
 }

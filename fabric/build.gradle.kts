@@ -11,6 +11,7 @@ val fabricLoaderVersion = providers.gradleProperty("fabricLoaderVersion").get()
 val fabricApiVersion = providers.gradleProperty("fabricApiVersion").get()
 
 dependencies {
+    implementation(project(":common"))
     minecraft("com.mojang:minecraft:$minecraftVersion")
     mappings("net.fabricmc:yarn:$minecraftVersion+build.3:v2")
     modImplementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
@@ -18,7 +19,6 @@ dependencies {
 }
 
 java {
-    withSourcesJar()
     val javaVersion = providers.gradleProperty("javaVersion").map(String::toInt).get()
     toolchain.languageVersion.set(JavaLanguageVersion.of(javaVersion))
 }
@@ -39,4 +39,10 @@ tasks.processResources {
     )
     inputs.properties(props)
     filesMatching("fabric.mod.json") { expand(props) }
+}
+
+tasks.named<Jar>("jar") {
+    dependsOn(":common:classes")
+    from(project(":common").layout.buildDirectory.dir("classes/java/main"))
+    from(project(":common").layout.buildDirectory.dir("resources/main"))
 }

@@ -3,8 +3,6 @@ package pl.fuzjajadrowa.radiationzones.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import net.minecraft.core.BlockPos;
-import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -21,6 +19,9 @@ import java.util.Objects;
 public final class RadiationServerConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Type TYPE = new TypeToken<RadiationServerConfig>() {}.getType();
+    private static final String FILE_NAME = "radiationzones-server.json";
+
+    private transient Path configPath;
 
     private boolean enableCommands = true;
     private int radiationCheckIntervalTicks = 20;
@@ -39,13 +40,14 @@ public final class RadiationServerConfig {
         }
     }
 
-    public static RadiationServerConfig loadOrCreate() {
-        Path configPath = FMLPaths.CONFIGDIR.get().resolve("radiationzones-server.json");
+    public static RadiationServerConfig loadOrCreate(Path configDir) {
+        Path configPath = configDir.resolve(FILE_NAME);
 
         if (Files.exists(configPath)) {
             try (Reader reader = Files.newBufferedReader(configPath)) {
                 RadiationServerConfig config = GSON.fromJson(reader, TYPE);
                 if (config != null) {
+                    config.bindPath(configPath);
                     config.normalize();
                     return config;
                 }
@@ -54,8 +56,13 @@ public final class RadiationServerConfig {
         }
 
         RadiationServerConfig config = new RadiationServerConfig();
+        config.bindPath(configPath);
         config.save();
         return config;
+    }
+
+    public synchronized void bindPath(Path configPath) {
+        this.configPath = Objects.requireNonNull(configPath, "configPath");
     }
 
     private void normalize() {
@@ -78,11 +85,13 @@ public final class RadiationServerConfig {
     }
 
     public synchronized void save() {
-        Path configPath = FMLPaths.CONFIGDIR.get().resolve("radiationzones-server.json");
+        if (this.configPath == null) {
+            return;
+        }
 
         try {
-            Files.createDirectories(configPath.getParent());
-            try (Writer writer = Files.newBufferedWriter(configPath)) {
+            Files.createDirectories(this.configPath.getParent());
+            try (Writer writer = Files.newBufferedWriter(this.configPath)) {
                 GSON.toJson(this, TYPE, writer);
             }
         } catch (IOException ignored) {
@@ -113,10 +122,9 @@ public final class RadiationServerConfig {
         return List.copyOf(this.radiationEffects);
     }
 
-    public synchronized void setSafeZone(String dimensionId, BlockPos center, int radius) {
+    public synchronized void setSafeZone(String dimensionId, int x, int y, int z, int radius) {
         Objects.requireNonNull(dimensionId, "dimensionId");
-        Objects.requireNonNull(center, "center");
-        this.safeZonesByDimension.put(dimensionId, new SafeZone(center.getX(), center.getY(), center.getZ(), radius));
+        this.safeZonesByDimension.put(dimensionId, new SafeZone(x, y, z, radius));
         this.save();
     }
 
@@ -188,5 +196,4 @@ public final class RadiationServerConfig {
             return Math.abs(px - this.x) <= this.radius && Math.abs(pz - this.z) <= this.radius;
         }
     }
-
 }

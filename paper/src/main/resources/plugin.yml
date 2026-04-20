@@ -4,7 +4,7 @@ main: pl.fuzjajadrowa.radiationzones.RadiationZones
 api-version: '1.21'
 load: STARTUP
 authors: [FuzjaJadrowa]
-description: Radiation zones with Lugol's iodine potions for Paper 1.21.1.
+description: Radiation Zones adds configurable radiation zones to Minecraft. Players outside safe areas receive harmful effects unless protected by Lugol's iodine.
 website: https://fuzjajadrowa.pl
 
 commands:

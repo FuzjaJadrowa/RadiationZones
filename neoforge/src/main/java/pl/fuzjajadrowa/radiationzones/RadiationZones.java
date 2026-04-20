@@ -30,6 +30,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import pl.fuzjajadrowa.radiationzones.config.RadiationServerConfig;
 import pl.fuzjajadrowa.radiationzones.effect.LugolsIodineMobEffect;
+import pl.fuzjajadrowa.radiationzones.util.ColorUtil;
+import net.neoforged.fml.loading.FMLPaths;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,14 +48,14 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 @Mod(RadiationZones.MOD_ID)
 public final class RadiationZones {
     public static final String MOD_ID = "radiationzones";
-    private static final RadiationServerConfig CONFIG = RadiationServerConfig.loadOrCreate();
+    private static final RadiationServerConfig CONFIG = RadiationServerConfig.loadOrCreate(FMLPaths.CONFIGDIR.get());
 
     private static final DeferredRegister<MobEffect> EFFECTS = DeferredRegister.create(BuiltInRegistries.MOB_EFFECT, MOD_ID);
     private static final DeferredRegister<Potion> POTIONS = DeferredRegister.create(BuiltInRegistries.POTION, MOD_ID);
 
     private static final DeferredHolder<MobEffect, MobEffect> LUGOLS_EFFECT = EFFECTS.register(
             "lugols_iodine",
-            () -> new LugolsIodineMobEffect(parseHexColorStatic(CONFIG.getLugol().color(), 0x197d14))
+            () -> new LugolsIodineMobEffect(ColorUtil.parseHexColor(CONFIG.getLugol().color(), 0x197d14))
     );
 
     private static final DeferredHolder<Potion, Potion> LUGOLS_POTION = POTIONS.register(
@@ -106,7 +108,8 @@ public final class RadiationZones {
 
         ServerLevel level = source.getLevel();
         String dimensionId = level.dimension().location().toString();
-        CONFIG.setSafeZone(dimensionId, BlockPos.containing(source.getPosition()), radius);
+        BlockPos center = BlockPos.containing(source.getPosition());
+        CONFIG.setSafeZone(dimensionId, center.getX(), center.getY(), center.getZ(), radius);
 
         source.sendSuccess(() -> Component.literal("Saved safe zone for " + dimensionId + " with radius " + radius + "."), true);
         return 1;
@@ -297,23 +300,6 @@ public final class RadiationZones {
             return ResourceLocation.fromNamespaceAndPath("minecraft", raw.toLowerCase(Locale.ROOT));
         } catch (RuntimeException ignored) {
             return null;
-        }
-    }
-
-    private static int parseHexColorStatic(String input, int fallback) {
-        if (input == null) {
-            return fallback;
-        }
-
-        String normalized = input.trim();
-        if (normalized.startsWith("#")) {
-            normalized = normalized.substring(1);
-        }
-
-        try {
-            return Integer.parseInt(normalized, 16);
-        } catch (NumberFormatException ignored) {
-            return fallback;
         }
     }
 
