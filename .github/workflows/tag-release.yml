@@ -34,12 +34,9 @@ jobs:
         with:
           name: all-artifacts-${{ github.ref_name }}
           path: |
-            paper/build/libs/*
-            fabric/build/libs/*
-            neoforge/build/libs/*
-            !paper/build/libs/*-sources.jar
-            !fabric/build/libs/*-sources.jar
-            !neoforge/build/libs/*-sources.jar
+            paper/build/libs/*.jar
+            fabric/build/libs/*.jar
+            neoforge/build/libs/*.jar
           if-no-files-found: error
 
       - name: Create GitHub release
@@ -49,10 +46,7 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: .github/changelog.md
           files: |
-            paper/build/libs/*
-            fabric/build/libs/*
-            neoforge/build/libs/*
-            !paper/build/libs/*-sources.jar
-            !fabric/build/libs/*-sources.jar
-            !neoforge/build/libs/*-sources.jar
+            paper/build/libs/*.jar
+            fabric/build/libs/*.jar
+            neoforge/build/libs/*.jar
           fail_on_unmatched_files: true
