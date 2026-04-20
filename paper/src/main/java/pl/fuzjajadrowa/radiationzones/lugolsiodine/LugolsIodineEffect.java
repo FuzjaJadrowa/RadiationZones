@@ -40,8 +40,6 @@ public class LugolsIodineEffect implements Listener {
     private static final Duration TASK_PERIOD = Duration.ofSeconds(1);
 
     private NamespacedKey entityStorageKey;
-    private NamespacedKey legacyInitialSecondsKey;
-    private NamespacedKey legacySecondsLeftKey;
 
     private final Plugin plugin;
     private Task task;
@@ -52,8 +50,6 @@ public class LugolsIodineEffect implements Listener {
 
     public void enable() {
         this.entityStorageKey = new NamespacedKey(this.plugin, "effect_data");
-        this.legacyInitialSecondsKey = new NamespacedKey(this.plugin, "initial_seconds");
-        this.legacySecondsLeftKey = new NamespacedKey(this.plugin, "seconds_left");
 
         this.task = new Task();
         this.task.runTaskTimer(this.plugin, 0L, TASK_PERIOD.toSeconds() * 20L);
@@ -91,8 +87,6 @@ public class LugolsIodineEffect implements Listener {
     }
 
     public List<Effect> getEffects(Entity entity) throws IOException {
-        this.migrateLegacyEffect(entity);
-
         return this.readEffects(entity.getPersistentDataContainer()).stream()
                 .filter(effect -> !effect.getTimeLeft().isNegative())
                 .toList();
@@ -150,32 +144,6 @@ public class LugolsIodineEffect implements Listener {
         return new Effect(id, initialDuration, timeLeft, radiationIds);
     }
 
-    private void migrateLegacyEffect(Entity entity) throws IOException {
-        PersistentDataContainer container = entity.getPersistentDataContainer();
-
-        int initialSeconds;
-        int secondsLeft;
-        try {
-            initialSeconds = container.getOrDefault(this.legacyInitialSecondsKey, PersistentDataType.INTEGER, -1);
-            secondsLeft = container.getOrDefault(this.legacySecondsLeftKey, PersistentDataType.INTEGER, -1);
-        } finally {
-            container.remove(this.legacyInitialSecondsKey);
-            container.remove(this.legacySecondsLeftKey);
-        }
-
-        if (initialSeconds == -1 || secondsLeft <= -1) {
-            return;
-        }
-
-        String id = "__legacy_effect__";
-        Duration initialDuration = Duration.ofSeconds(initialSeconds);
-        Duration timeLeft = Duration.ofSeconds(secondsLeft);
-        List<String> radiationIds = null;
-
-        Effect effect = new Effect(id, initialDuration, timeLeft, radiationIds);
-        this.appendEffect(entity, effect);
-    }
-
     private List<Effect> readEffects(PersistentDataContainer container) throws IOException {
         if (!container.has(this.entityStorageKey, PersistentDataType.BYTE_ARRAY)) {
             return Collections.emptyList();
@@ -189,11 +157,6 @@ public class LugolsIodineEffect implements Listener {
         List<Effect> effectList = new ArrayList<>();
         try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
              DataInputStream dis = new DataInputStream(bais)) {
-            short protocolVersion = dis.readShort();
-            if (protocolVersion != 0) {
-                throw new IOException("Unsupported protocol version: " + protocolVersion);
-            }
-
             int effectListCount = dis.readInt();
             for (int i = 0; i < effectListCount; i++) {
                 String id = dis.readUTF();
@@ -224,7 +187,6 @@ public class LugolsIodineEffect implements Listener {
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              DataOutputStream dos = new DataOutputStream(baos)) {
-            dos.writeShort(0);
             dos.writeInt(effectList.size());
 
             for (Effect effect : effectList) {
@@ -248,8 +210,6 @@ public class LugolsIodineEffect implements Listener {
 
     private void removeAllEffects(PersistentDataContainer container) {
         container.remove(this.entityStorageKey);
-        container.remove(this.legacyInitialSecondsKey);
-        container.remove(this.legacySecondsLeftKey);
     }
 
     public static class Effect {

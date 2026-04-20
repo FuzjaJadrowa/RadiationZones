@@ -2,9 +2,6 @@ package pl.fuzjajadrowa.radiationzones;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarFlag;
-import org.bukkit.boss.BarStyle;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.MemoryConfiguration;
@@ -29,7 +26,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,9 +33,8 @@ public final class RadiationZones extends JavaPlugin {
     static final Logger logger = Logger.getLogger(RadiationZones.class.getName());
 
     private static final char COLOR_CODE = '&';
-    private static final String LEGACY_PROTOCOL_KEY = "file-protocol-version-dont-touch";
     private static final String CONFIG_VERSION_KEY = "file-version-dont-touch";
-    private static final int CONFIG_VERSION = 4;
+    private static final int CONFIG_VERSION = 1;
 
     private RadiationNmsBridge radiationNmsBridge;
     private Config config;
@@ -152,10 +147,6 @@ public final class RadiationZones extends JavaPlugin {
     }
 
     private int resolveConfigVersion(ConfigurationSection section) {
-        if (section.contains(LEGACY_PROTOCOL_KEY)) {
-            return section.getInt(LEGACY_PROTOCOL_KEY, -1);
-        }
-
         if (section.contains(CONFIG_VERSION_KEY)) {
             return section.getInt(CONFIG_VERSION_KEY, -1);
         }
@@ -171,90 +162,10 @@ public final class RadiationZones extends JavaPlugin {
             return false;
         }
 
-        if (configVersion < 0) {
-            section.set("lugols-iodine-bar.title", "Dzialanie Plynu Lugola");
-            section.set("lugols-iodine-bar.color", BarColor.GREEN.name());
-            section.set("lugols-iodine-bar.style", BarStyle.SEGMENTED_20.name());
-            section.set("lugols-iodine-bar.flags", Collections.emptyList());
-
-            section.set("lugols-iodine-potion.name", "Plyn Lugola");
-            section.set("lugols-iodine-potion.description", "Odpornosc na promieniowanie (%time%)");
-            section.set("lugols-iodine-potion.duration", TimeUnit.MINUTES.toSeconds(section.getInt("potion-duration", 10)));
-            section.set("lugols-iodine-potion.drink-message", "%player%" + ChatColor.RED + " wypil/a %mixture%.");
-
-            section.set("radiation.bar.title", "Strefa radiacji");
-            section.set("radiation.bar.color", BarColor.RED.name());
-            section.set("radiation.bar.style", BarStyle.SOLID.name());
-            section.set("radiation.bar.flags", Collections.singletonList(BarFlag.DARKEN_SKY.name()));
-
-            section.set("radiation.effects.wither.level", 5);
-            section.set("radiation.effects.wither.ambient", false);
-            section.set("radiation.effects.wither.has-particles", false);
-            section.set("radiation.effects.wither.has-icon", false);
-
-            section.set("radiation.effects.hunger.level", 1);
-            section.set("radiation.effects.hunger.ambient", false);
-            section.set("radiation.effects.hunger.has-particles", false);
-            section.set("radiation.effects.hunger.has-icon", false);
-
-            section.set("radiation.escape-message", "%player%" + ChatColor.RED + " uciekl/a do strefy radiacji.");
+        if (configVersion < CONFIG_VERSION) {
+            section.set(CONFIG_VERSION_KEY, CONFIG_VERSION);
+            this.saveConfig();
         }
-
-        if (configVersion < 1) {
-            section.set("lugols-iodine-potion.recipe.enabled", true);
-            section.set("lugols-iodine-potion.recipe.base-potion", LugolsIodinePotion.Config.Recipe.DEFAULT_BASE_POTION.name());
-            section.set("lugols-iodine-potion.recipe.ingredient", LugolsIodinePotion.Config.Recipe.DEFAULT_INGREDIENT.getKey().getKey());
-            section.set("lugols-iodine-potion.color", null);
-        }
-
-        if (configVersion < 2) {
-            MemoryConfiguration defaultRadiation = new MemoryConfiguration();
-            ConfigurationSection oldRadiation = section.getConfigurationSection("radiation");
-            if (oldRadiation != null) {
-                oldRadiation.getValues(true).forEach(defaultRadiation::set);
-            }
-
-            section.set("radiation", null);
-            section.set("radiations.default", defaultRadiation);
-        }
-
-        if (configVersion < 3) {
-            ConfigurationSection radiations = section.getConfigurationSection("radiations");
-            if (radiations != null) {
-                for (String key : radiations.getKeys(false)) {
-                    ConfigurationSection radiation = radiations.getConfigurationSection(key);
-                    if (radiation != null) {
-                        radiation.set("enter-message", radiation.getString("escape-message"));
-                    }
-                }
-            }
-        }
-
-        if (configVersion < 4) {
-            MemoryConfiguration defaultBar = new MemoryConfiguration();
-            ConfigurationSection oldBar = section.getConfigurationSection("lugols-iodine-bar");
-            if (oldBar != null) {
-                oldBar.getValues(true).forEach(defaultBar::set);
-            }
-
-            section.set("lugols-iodine-bar", null);
-            section.set("lugols-iodine-bars.default", defaultBar);
-
-            MemoryConfiguration defaultPotion = new MemoryConfiguration();
-            defaultPotion.set("radiation-ids", Collections.emptyList());
-
-            ConfigurationSection oldPotion = section.getConfigurationSection("lugols-iodine-potion");
-            if (oldPotion != null) {
-                oldPotion.getValues(true).forEach(defaultPotion::set);
-            }
-
-            section.set("lugols-iodine-potion", null);
-            section.set("lugols-iodine-potions.default", defaultPotion);
-        }
-
-        section.set(LEGACY_PROTOCOL_KEY, null);
-        section.set(CONFIG_VERSION_KEY, CONFIG_VERSION);
-        this.saveConfig();
         return true;
     }
 

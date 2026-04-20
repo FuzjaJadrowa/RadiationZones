@@ -48,8 +48,6 @@ import java.util.logging.Logger;
 public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
     static final Logger logger = Logger.getLogger(LugolsIodinePotion.class.getName());
 
-    private static final byte TRUE = 1;
-
     private final Plugin plugin;
     private final LugolsIodineEffect effect;
     private final Config config;
@@ -57,8 +55,6 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
     private NamespacedKey potionIdKey;
     private NamespacedKey radiationIdsKey;
     private NamespacedKey durationSecondsKey;
-    private NamespacedKey legacyPotionKey;
-    private NamespacedKey legacyDurationKey;
 
     private NamespacedKey recipeKey;
 
@@ -72,8 +68,6 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
         this.potionIdKey = new NamespacedKey(this.plugin, "lugols_iodine_id");
         this.radiationIdsKey = new NamespacedKey(this.plugin, "radiation_ids");
         this.durationSecondsKey = new NamespacedKey(this.plugin, "duration_seconds");
-        this.legacyPotionKey = new NamespacedKey(this.plugin, "lugols_iodine");
-        this.legacyDurationKey = new NamespacedKey(this.plugin, "duration");
 
         Config.Recipe recipeConfig = this.config.recipe();
         if (recipeConfig.enabled()) {
@@ -103,17 +97,7 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
 
         String id = this.config.id();
         PersistentDataContainer container = Objects.requireNonNull(itemStack.getItemMeta()).getPersistentDataContainer();
-
-        if (id.equals(Config.DEFAULT_ID) && container.has(this.legacyPotionKey, PersistentDataType.BYTE)) {
-            Byte value = container.get(this.legacyPotionKey, PersistentDataType.BYTE);
-            return value != null && value == TRUE;
-        }
-
-        if (container.has(this.potionIdKey, PersistentDataType.STRING)) {
-            return id.equals(container.get(this.potionIdKey, PersistentDataType.STRING));
-        }
-
-        return false;
+        return id.equals(container.get(this.potionIdKey, PersistentDataType.STRING));
     }
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
@@ -147,8 +131,6 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
         Duration duration = Duration.ZERO;
         if (container.has(this.durationSecondsKey, PersistentDataType.INTEGER)) {
             duration = Duration.ofSeconds(container.getOrDefault(this.durationSecondsKey, PersistentDataType.INTEGER, 0));
-        } else if (container.has(this.legacyDurationKey, PersistentDataType.INTEGER)) {
-            duration = Duration.ofMinutes(container.getOrDefault(this.legacyDurationKey, PersistentDataType.INTEGER, 0));
         }
 
         if (duration.isNegative() || duration.isZero()) {

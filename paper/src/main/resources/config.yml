@@ -1,7 +1,7 @@
 # Radiation Zones Config File
 # Source code: https://github.com/FuzjaJadrowa/RadiationZones
 # Issues: https://github.com/FuzjaJadrowa/RadiationZones/issues
-file-version-dont-touch: 4
+file-version-dont-touch: 1
 lugols-iodine-bars:
   # The "default" bar. You can define as many bars as you want.
   # It is recommended to not remove or rename the "default" bar, as it is used

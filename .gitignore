@@ -53,6 +53,7 @@ $RECYCLE.BIN/
 *.lnk
 .gradle
 .gradle-user/
+.gradle-user-alt/
 build/
 gradle-app.setting
 .gradletasknamecache

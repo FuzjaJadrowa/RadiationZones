@@ -86,7 +86,6 @@ public class SafeZoneStore {
 
     private synchronized void save() {
         FileConfiguration yaml = new YamlConfiguration();
-        yaml.set("file-version-dont-touch", 1);
 
         for (Map.Entry<String, SafeZone> entry : this.zonesByWorld.entrySet()) {
             String worldName = entry.getKey();
