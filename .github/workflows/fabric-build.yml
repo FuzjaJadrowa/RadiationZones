@@ -31,5 +31,4 @@ jobs:
           name: fabric-artifacts
           path: |
             fabric/build/libs/*
-            !fabric/build/libs/*-sources.jar
           if-no-files-found: error

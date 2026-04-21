@@ -15,7 +15,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.BrewEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.BrewerInventory;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
@@ -227,7 +226,6 @@ public class LugolsIodinePotion implements Listener, Predicate<ItemStack> {
         String formattedDuration = formatDuration(duration);
 
         this.config.color().ifPresent(potionMeta::setColor);
-        potionMeta.addItemFlags(ItemFlag.HIDE_ITEM_SPECIFICS);
         potionMeta.setDisplayName(ChatColor.AQUA + this.config.name());
         String description = applyAliases(this.config.description(), null, null, formattedDuration);
         potionMeta.setLore(Collections.singletonList(ChatColor.BLUE + description));

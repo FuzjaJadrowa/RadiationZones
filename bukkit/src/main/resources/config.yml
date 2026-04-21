@@ -35,7 +35,7 @@ lugols-iodine-potions:
       # Should the potion be brewable in brewing stand?
       enabled: true
       # Base potion type. The List of potion types is available here:
-      # https://jd.papermc.io/paper/1.21.1/org/bukkit/potion/PotionType.html
+      # https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/potion/PotionType.html
       base-potion: 'THICK'
       # Ingredient item ID.
       # IDs can be obtained when hovering over items using F3+H debug mode.

@@ -10,7 +10,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import pl.fuzjajadrowa.radiationzones.lugolsiodine.LugolsIodineDisplay;
 import pl.fuzjajadrowa.radiationzones.lugolsiodine.LugolsIodineEffect;
 import pl.fuzjajadrowa.radiationzones.lugolsiodine.LugolsIodinePotion;
-import pl.fuzjajadrowa.radiationzones.nms.PaperNmsBridge;
+import pl.fuzjajadrowa.radiationzones.nms.BukkitNmsBridge;
 import pl.fuzjajadrowa.radiationzones.nms.RadiationNmsBridge;
 import pl.fuzjajadrowa.radiationzones.radiation.BarConfig;
 import pl.fuzjajadrowa.radiationzones.radiation.Radiation;
@@ -55,7 +55,7 @@ public final class RadiationZones extends JavaPlugin {
         Server server = this.getServer();
         this.saveDefaultConfig();
 
-        this.radiationNmsBridge = new PaperNmsBridge(server);
+        this.radiationNmsBridge = new BukkitNmsBridge();
 
         FileConfiguration rawConfig = this.getConfig();
         int configVersion = this.resolveConfigVersion(rawConfig);

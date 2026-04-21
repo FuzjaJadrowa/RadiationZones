@@ -27,14 +27,14 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build all modules
-        run: ./gradlew clean :paper:build :fabric:build :neoforge:build --no-daemon
+        run: ./gradlew clean :bukkit:build :fabric:build :neoforge:build --no-daemon
 
       - name: Upload CI artifacts
         uses: actions/upload-artifact@v4
         with:
           name: all-artifacts-${{ github.ref_name }}
           path: |
-            paper/build/libs/*.jar
+            bukkit/build/libs/*.jar
             fabric/build/libs/*.jar
             neoforge/build/libs/*.jar
           if-no-files-found: error
@@ -46,7 +46,7 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: .github/changelog.md
           files: |
-            paper/build/libs/*.jar
+            bukkit/build/libs/*.jar
             fabric/build/libs/*.jar
             neoforge/build/libs/*.jar
           fail_on_unmatched_files: true

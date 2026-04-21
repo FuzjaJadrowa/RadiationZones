@@ -31,5 +31,4 @@ jobs:
           name: neoforge-artifacts
           path: |
             neoforge/build/libs/*
-            !neoforge/build/libs/*-sources.jar
           if-no-files-found: error

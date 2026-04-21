@@ -1,15 +1,13 @@
 plugins {
     java
-    id("xyz.jpenilla.run-paper") version "2.3.1"
 }
 
 base {
-    archivesName.set("${providers.gradleProperty("projectId").get()}-paper")
+    archivesName.set("${providers.gradleProperty("projectId").get()}-bukkit")
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
-    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.10")
+    compileOnly("org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT")
 }
 
 java {
@@ -30,8 +28,4 @@ tasks.processResources {
     filesMatching("plugin.yml") {
         expand(props)
     }
-}
-
-tasks.runServer {
-    minecraftVersion("1.21.1")
 }

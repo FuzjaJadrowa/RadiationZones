@@ -22,14 +22,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Paper
-        run: ./gradlew :paper:clean :paper:build --no-daemon
+      - name: Build Bukkit
+        run: ./gradlew :bukkit:clean :bukkit:build --no-daemon
 
-      - name: Upload Paper artifacts
+      - name: Upload Bukkit artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: paper-artifacts
+          name: bukkit-artifacts
           path: |
-            paper/build/libs/*
-            !paper/build/libs/*-sources.jar
+            bukkit/build/libs/*
           if-no-files-found: error
