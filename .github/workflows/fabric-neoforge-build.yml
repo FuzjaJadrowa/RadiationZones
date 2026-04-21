@@ -1,4 +1,4 @@
-name: Multiloader Build
+name: Fabric-Neoforge Build
 
 on:
   push:

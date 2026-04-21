@@ -171,7 +171,9 @@ public final class RadiationZones {
     }
 
     private void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        this.clearPlayerRadiationState(event.getEntity(), true);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            this.clearPlayerRadiationState(player, true);
+        }
     }
 
     private void tickPlayer(ServerPlayer player, List<ServerPlayer> allPlayers) {
