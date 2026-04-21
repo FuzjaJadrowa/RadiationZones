@@ -1,4 +1,4 @@
-name: NeoForge Build
+name: Multiloader Build
 
 on:
   push:
@@ -22,13 +22,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build NeoForge
-        run: ./gradlew :neoforge:clean :neoforge:build --no-daemon
+      - name: Build Fabric-NeoForge bundle
+        run: ./gradlew clean :multiloaderJar --no-daemon
 
-      - name: Upload NeoForge artifacts
+      - name: Upload Fabric-NeoForge artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: neoforge-artifacts
+          name: fabric-neoforge-artifacts
           path: |
-            neoforge/build/libs/*
+            build/libs/*fabric-neoforge*.jar
           if-no-files-found: error

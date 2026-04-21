@@ -26,17 +26,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build all modules
-        run: ./gradlew clean :bukkit:build :fabric:build :neoforge:build --no-daemon
+      - name: Build release artifacts
+        run: ./gradlew clean :bukkit:build :multiloaderJar --no-daemon
 
       - name: Upload CI artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: all-artifacts-${{ github.ref_name }}
+          name: release-artifacts-${{ github.ref_name }}
           path: |
-            bukkit/build/libs/*.jar
-            fabric/build/libs/*.jar
-            neoforge/build/libs/*.jar
+            bukkit/build/libs/*bukkit*.jar
+            build/libs/*fabric-neoforge*.jar
           if-no-files-found: error
 
       - name: Create GitHub release
@@ -46,7 +45,6 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: .github/changelog.md
           files: |
-            bukkit/build/libs/*.jar
-            fabric/build/libs/*.jar
-            neoforge/build/libs/*.jar
+            bukkit/build/libs/*bukkit*.jar
+            build/libs/*fabric-neoforge*.jar
           fail_on_unmatched_files: true
