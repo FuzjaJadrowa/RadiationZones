@@ -26,6 +26,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -78,6 +80,8 @@ public final class RadiationZones {
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onRegisterBrewingRecipes);
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
+        NeoForge.EVENT_BUS.addListener(this::onPlayerDeath);
+        NeoForge.EVENT_BUS.addListener(this::onPlayerRespawn);
     }
 
     private void onRegisterBrewingRecipes(RegisterBrewingRecipesEvent event) {
@@ -160,7 +164,22 @@ public final class RadiationZones {
         this.barsByPlayer.entrySet().removeIf(entry -> !online.contains(entry.getKey()));
     }
 
+    private void onPlayerDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            this.clearPlayerRadiationState(player, true);
+        }
+    }
+
+    private void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        this.clearPlayerRadiationState(event.getEntity(), true);
+    }
+
     private void tickPlayer(ServerPlayer player, List<ServerPlayer> allPlayers) {
+        if (!player.isAlive()) {
+            this.clearPlayerRadiationState(player, true);
+            return;
+        }
+
         String dimensionId = player.level().dimension().location().toString();
         RadiationServerConfig.SafeZone safeZone = CONFIG.getSafeZone(dimensionId);
         UUID playerId = player.getUUID();
@@ -192,12 +211,6 @@ public final class RadiationZones {
                 return;
             }
 
-            if (!hasLugol) {
-                for (MobEffectInstance effect : this.buildRadiationEffects()) {
-                    player.addEffect(effect);
-                }
-            }
-
             this.showRadiationBar(player, (float) remaining / EXIT_FADE_SECONDS);
             remaining--;
             this.exitFadeByPlayer.put(playerId, remaining);
@@ -221,12 +234,6 @@ public final class RadiationZones {
                 this.exitFadeByPlayer.remove(playerId);
                 this.removeBar(player);
                 return;
-            }
-
-            if (!hasLugol) {
-                for (MobEffectInstance effect : this.buildRadiationEffects()) {
-                    player.addEffect(effect);
-                }
             }
 
             this.showRadiationBar(player, (float) remaining / EXIT_FADE_SECONDS);
@@ -264,6 +271,7 @@ public final class RadiationZones {
         bar.setName(this.createBarTitle(barConfig.title()));
         bar.setColor(this.parseBarColor(barConfig.color()));
         bar.setOverlay(this.parseBarOverlay(barConfig.style()));
+        this.applyBarFlags(bar, barConfig);
         bar.setProgress(Math.max(0.0F, Math.min(1.0F, progress)));
 
         if (!bar.getPlayers().contains(player)) {
@@ -278,8 +286,44 @@ public final class RadiationZones {
         }
     }
 
+    private void clearPlayerRadiationState(ServerPlayer player, boolean clearEffects) {
+        UUID playerId = player.getUUID();
+        this.playersInRadiation.remove(playerId);
+        this.affectedPlayers.remove(playerId);
+        this.hadLugolEffect.remove(playerId);
+        this.exitFadeByPlayer.remove(playerId);
+        this.removeBar(player);
+
+        if (clearEffects) {
+            for (MobEffectInstance effect : this.buildRadiationEffects()) {
+                player.removeEffect(effect.getEffect());
+            }
+        }
+    }
+
     private Component createBarTitle(String title) {
         return Component.literal(title).withStyle(ChatFormatting.DARK_RED);
+    }
+
+    private void applyBarFlags(ServerBossEvent bar, RadiationServerConfig.RadiationBar barConfig) {
+        boolean darkenSky = false;
+        boolean createFog = false;
+
+        for (String flag : barConfig.flags()) {
+            if (flag == null) {
+                continue;
+            }
+
+            switch (flag.toLowerCase(Locale.ROOT)) {
+                case "darken_sky" -> darkenSky = true;
+                case "create_fog" -> createFog = true;
+                default -> {
+                }
+            }
+        }
+
+        bar.setDarkenScreen(darkenSky);
+        bar.setCreateWorldFog(createFog);
     }
 
     private List<MobEffectInstance> buildRadiationEffects() {

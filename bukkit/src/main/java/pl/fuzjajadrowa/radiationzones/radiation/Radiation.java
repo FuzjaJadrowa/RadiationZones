@@ -13,7 +13,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.plugin.Plugin;
@@ -143,6 +145,26 @@ public class Radiation implements Listener {
         this.removeAffectedPlayer(event.getPlayer(), true);
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        this.removeAffectedPlayer(player, true);
+        this.clearRadiationEffects(player);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        Player player = event.getPlayer();
+        this.removeAffectedPlayer(player, true);
+        this.clearRadiationEffects(player);
+    }
+
+    private void clearRadiationEffects(Player player) {
+        for (PotionEffect effect : this.config.effects()) {
+            player.removePotionEffect(effect.getType());
+        }
+    }
+
     class Task extends BukkitRunnable {
         @Override
         public void run() {
@@ -150,6 +172,12 @@ public class Radiation implements Listener {
             Iterable<PotionEffect> effects = config.effects();
 
             server.getOnlinePlayers().forEach(player -> {
+                if (player.isDead() || player.getHealth() <= 0.0D) {
+                    Radiation.this.removeAffectedPlayer(player, true);
+                    Radiation.this.clearRadiationEffects(player);
+                    return;
+                }
+
                 UUID playerId = player.getUniqueId();
                 boolean inside = matcher.test(player);
                 if (inside) {
@@ -193,10 +221,6 @@ public class Radiation implements Listener {
                     exitFadeByPlayer.remove(playerId);
                     removeBossBar(player);
                     return;
-                }
-
-                for (PotionEffect effect : effects) {
-                    player.addPotionEffect(effect, true);
                 }
 
                 setBossBar(player, (double) remaining / EXIT_FADE_SECONDS);

@@ -2,6 +2,7 @@ package pl.fuzjajadrowa.radiationzones;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.registry.FabricBrewingRecipeRegistryBuilder;
 import net.minecraft.entity.boss.BossBar;
@@ -78,6 +79,7 @@ public final class RadiationZones implements ModInitializer {
         this.registerBrewingRecipe();
         this.registerCommands();
         this.registerRadiationTicker();
+        this.registerRespawnHandler();
     }
 
     private void registerCommands() {
@@ -165,7 +167,16 @@ public final class RadiationZones implements ModInitializer {
         });
     }
 
+    private void registerRespawnHandler() {
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> this.clearPlayerRadiationState(newPlayer, true));
+    }
+
     private void tickPlayer(ServerPlayerEntity player, List<ServerPlayerEntity> allPlayers) {
+        if (!player.isAlive()) {
+            this.clearPlayerRadiationState(player, true);
+            return;
+        }
+
         String dimensionId = player.getWorld().getRegistryKey().getValue().toString();
         RadiationServerConfig.SafeZone safeZone = this.config.getSafeZone(dimensionId);
         UUID playerId = player.getUuid();
@@ -197,12 +208,6 @@ public final class RadiationZones implements ModInitializer {
                 return;
             }
 
-            if (!hasLugol) {
-                for (StatusEffectInstance effect : this.buildRadiationEffects()) {
-                    player.addStatusEffect(effect);
-                }
-            }
-
             this.showRadiationBar(player, (float) remaining / EXIT_FADE_SECONDS);
             remaining--;
             this.exitFadeByPlayer.put(playerId, remaining);
@@ -226,12 +231,6 @@ public final class RadiationZones implements ModInitializer {
                 this.exitFadeByPlayer.remove(playerId);
                 this.removeBar(player);
                 return;
-            }
-
-            if (!hasLugol) {
-                for (StatusEffectInstance effect : this.buildRadiationEffects()) {
-                    player.addStatusEffect(effect);
-                }
             }
 
             this.showRadiationBar(player, (float) remaining / EXIT_FADE_SECONDS);
@@ -269,6 +268,7 @@ public final class RadiationZones implements ModInitializer {
         bar.setName(this.createBarTitle(barConfig.title()));
         bar.setColor(this.parseBarColor(barConfig.color()));
         bar.setStyle(this.parseBarStyle(barConfig.style()));
+        this.applyBarFlags(bar, barConfig);
         bar.setPercent(Math.max(0.0F, Math.min(1.0F, progress)));
 
         if (!bar.getPlayers().contains(player)) {
@@ -283,8 +283,44 @@ public final class RadiationZones implements ModInitializer {
         }
     }
 
+    private void clearPlayerRadiationState(ServerPlayerEntity player, boolean clearEffects) {
+        UUID playerId = player.getUuid();
+        this.playersInRadiation.remove(playerId);
+        this.affectedPlayers.remove(playerId);
+        this.hadLugolEffect.remove(playerId);
+        this.exitFadeByPlayer.remove(playerId);
+        this.removeBar(player);
+
+        if (clearEffects) {
+            for (StatusEffectInstance effect : this.buildRadiationEffects()) {
+                player.removeStatusEffect(effect.getEffectType());
+            }
+        }
+    }
+
     private Text createBarTitle(String title) {
         return Text.literal(title).formatted(Formatting.DARK_RED);
+    }
+
+    private void applyBarFlags(ServerBossBar bar, RadiationServerConfig.RadiationBar barConfig) {
+        boolean darkenSky = false;
+        boolean createFog = false;
+
+        for (String flag : barConfig.flags()) {
+            if (flag == null) {
+                continue;
+            }
+
+            switch (flag.toLowerCase(Locale.ROOT)) {
+                case "darken_sky" -> darkenSky = true;
+                case "create_fog" -> createFog = true;
+                default -> {
+                }
+            }
+        }
+
+        bar.setDarkenSky(darkenSky);
+        bar.setThickenFog(createFog);
     }
 
     private List<StatusEffectInstance> buildRadiationEffects() {

@@ -175,10 +175,15 @@ public final class RadiationServerConfig {
             boolean enabled,
             String color,
             String style,
-            String title
+            String title,
+            List<String> flags
     ) {
+        public RadiationBar {
+            flags = flags == null ? List.of("darken_sky") : List.copyOf(flags);
+        }
+
         public RadiationBar() {
-            this(true, "red", "progress", "Radiation Zone");
+            this(true, "red", "progress", "Radiation Zone", List.of("darken_sky"));
         }
     }
 
