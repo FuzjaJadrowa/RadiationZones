@@ -187,20 +187,21 @@ public class Radiation implements Listener {
                     return;
                 }
 
-                int remaining = exitFadeByPlayer.getOrDefault(playerId, EXIT_FADE_SECONDS);
+                int remaining = exitFadeByPlayer.getOrDefault(playerId, EXIT_FADE_SECONDS - 1);
+                if (remaining < 0) {
+                    affectedPlayers.remove(playerId);
+                    exitFadeByPlayer.remove(playerId);
+                    removeBossBar(player);
+                    return;
+                }
+
                 for (PotionEffect effect : effects) {
                     player.addPotionEffect(effect, true);
                 }
 
                 setBossBar(player, (double) remaining / EXIT_FADE_SECONDS);
                 remaining--;
-                if (remaining <= 0) {
-                    affectedPlayers.remove(playerId);
-                    exitFadeByPlayer.remove(playerId);
-                    removeBossBar(player);
-                } else {
-                    exitFadeByPlayer.put(playerId, remaining);
-                }
+                exitFadeByPlayer.put(playerId, remaining);
             });
         }
     }

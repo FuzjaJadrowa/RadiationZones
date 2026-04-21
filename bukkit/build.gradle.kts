@@ -1,5 +1,6 @@
 plugins {
     java
+    id("xyz.jpenilla.run-paper") version "2.3.1"
 }
 
 base {
@@ -27,5 +28,11 @@ tasks.processResources {
     filteringCharset = "UTF-8"
     filesMatching("plugin.yml") {
         expand(props)
+    }
+}
+
+tasks {
+    runServer {
+        minecraftVersion("1.21.1")
     }
 }

@@ -2,6 +2,8 @@ plugins {
     id("net.neoforged.moddev") version "1.0.11"
 }
 
+import org.gradle.api.tasks.SourceSetContainer
+
 base {
     archivesName.set("${providers.gradleProperty("projectId").get()}-neoforge")
 }
@@ -23,6 +25,11 @@ tasks.withType<JavaCompile>().configureEach {
 
 neoForge {
     version = providers.gradleProperty("neoforgeVersion").get()
+    val commonMainSourceSet = project(":common")
+        .extensions
+        .getByType(SourceSetContainer::class.java)
+        .named("main")
+        .get()
 
     runs {
         create("client") {
@@ -36,6 +43,7 @@ neoForge {
     mods {
         create(providers.gradleProperty("modId").get()) {
             sourceSet(sourceSets.main.get())
+            sourceSet(commonMainSourceSet)
         }
     }
 }

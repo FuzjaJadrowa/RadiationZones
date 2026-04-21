@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
@@ -48,6 +49,7 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 @Mod(RadiationZones.MOD_ID)
 public final class RadiationZones {
     public static final String MOD_ID = "radiationzones";
+    private static final int EXIT_FADE_SECONDS = 5;
     private static final RadiationServerConfig CONFIG = RadiationServerConfig.loadOrCreate(FMLPaths.CONFIGDIR.get());
 
     private static final DeferredRegister<MobEffect> EFFECTS = DeferredRegister.create(BuiltInRegistries.MOB_EFFECT, MOD_ID);
@@ -64,7 +66,9 @@ public final class RadiationZones {
     );
 
     private final Set<UUID> playersInRadiation = new HashSet<>();
+    private final Set<UUID> affectedPlayers = new HashSet<>();
     private final Set<UUID> hadLugolEffect = new HashSet<>();
+    private final Map<UUID, Integer> exitFadeByPlayer = new HashMap<>();
     private final Map<UUID, ServerBossEvent> barsByPlayer = new HashMap<>();
 
     public RadiationZones(IEventBus modBus) {
@@ -150,7 +154,9 @@ public final class RadiationZones {
         }
 
         this.playersInRadiation.removeIf(uuid -> !online.contains(uuid));
+        this.affectedPlayers.removeIf(uuid -> !online.contains(uuid));
         this.hadLugolEffect.removeIf(uuid -> !online.contains(uuid));
+        this.exitFadeByPlayer.entrySet().removeIf(entry -> !online.contains(entry.getKey()));
         this.barsByPlayer.entrySet().removeIf(entry -> !online.contains(entry.getKey()));
     }
 
@@ -172,7 +178,29 @@ public final class RadiationZones {
 
         if (safeZone == null) {
             this.playersInRadiation.remove(playerId);
-            this.removeBar(player);
+            if (!this.affectedPlayers.contains(playerId)) {
+                this.exitFadeByPlayer.remove(playerId);
+                this.removeBar(player);
+                return;
+            }
+
+            int remaining = this.exitFadeByPlayer.getOrDefault(playerId, EXIT_FADE_SECONDS - 1);
+            if (remaining < 0) {
+                this.affectedPlayers.remove(playerId);
+                this.exitFadeByPlayer.remove(playerId);
+                this.removeBar(player);
+                return;
+            }
+
+            if (!hasLugol) {
+                for (MobEffectInstance effect : this.buildRadiationEffects()) {
+                    player.addEffect(effect);
+                }
+            }
+
+            this.showRadiationBar(player, (float) remaining / EXIT_FADE_SECONDS);
+            remaining--;
+            this.exitFadeByPlayer.put(playerId, remaining);
             return;
         }
 
@@ -181,11 +209,35 @@ public final class RadiationZones {
 
         if (!isInRadiationZone) {
             this.playersInRadiation.remove(playerId);
-            this.removeBar(player);
+            if (!this.affectedPlayers.contains(playerId)) {
+                this.exitFadeByPlayer.remove(playerId);
+                this.removeBar(player);
+                return;
+            }
+
+            int remaining = this.exitFadeByPlayer.getOrDefault(playerId, EXIT_FADE_SECONDS - 1);
+            if (remaining < 0) {
+                this.affectedPlayers.remove(playerId);
+                this.exitFadeByPlayer.remove(playerId);
+                this.removeBar(player);
+                return;
+            }
+
+            if (!hasLugol) {
+                for (MobEffectInstance effect : this.buildRadiationEffects()) {
+                    player.addEffect(effect);
+                }
+            }
+
+            this.showRadiationBar(player, (float) remaining / EXIT_FADE_SECONDS);
+            remaining--;
+            this.exitFadeByPlayer.put(playerId, remaining);
             return;
         }
 
         boolean entering = this.playersInRadiation.add(playerId);
+        this.affectedPlayers.add(playerId);
+        this.exitFadeByPlayer.remove(playerId);
         if (entering && CONFIG.getMessages().broadcastEnter()) {
             this.broadcast(allPlayers, this.replace(CONFIG.getMessages().enterTemplate(), player, dimensionId));
         }
@@ -196,10 +248,10 @@ public final class RadiationZones {
             }
         }
 
-        this.showRadiationBar(player);
+        this.showRadiationBar(player, 1.0F);
     }
 
-    private void showRadiationBar(ServerPlayer player) {
+    private void showRadiationBar(ServerPlayer player, float progress) {
         RadiationServerConfig.RadiationBar barConfig = CONFIG.getRadiationBar();
         if (!barConfig.enabled()) {
             this.removeBar(player);
@@ -207,12 +259,12 @@ public final class RadiationZones {
         }
 
         ServerBossEvent bar = this.barsByPlayer.computeIfAbsent(player.getUUID(), ignored ->
-                new ServerBossEvent(Component.literal(barConfig.title()), this.parseBarColor(barConfig.color()), this.parseBarOverlay(barConfig.style())));
+                new ServerBossEvent(this.createBarTitle(barConfig.title()), this.parseBarColor(barConfig.color()), this.parseBarOverlay(barConfig.style())));
 
-        bar.setName(Component.literal(barConfig.title()));
+        bar.setName(this.createBarTitle(barConfig.title()));
         bar.setColor(this.parseBarColor(barConfig.color()));
         bar.setOverlay(this.parseBarOverlay(barConfig.style()));
-        bar.setProgress(1.0F);
+        bar.setProgress(Math.max(0.0F, Math.min(1.0F, progress)));
 
         if (!bar.getPlayers().contains(player)) {
             bar.addPlayer(player);
@@ -220,10 +272,14 @@ public final class RadiationZones {
     }
 
     private void removeBar(ServerPlayer player) {
-        ServerBossEvent bar = this.barsByPlayer.get(player.getUUID());
+        ServerBossEvent bar = this.barsByPlayer.remove(player.getUUID());
         if (bar != null) {
             bar.removePlayer(player);
         }
+    }
+
+    private Component createBarTitle(String title) {
+        return Component.literal(title).withStyle(ChatFormatting.DARK_RED);
     }
 
     private List<MobEffectInstance> buildRadiationEffects() {

@@ -21,6 +21,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import pl.fuzjajadrowa.radiationzones.config.RadiationServerConfig;
 import pl.fuzjajadrowa.radiationzones.effect.LugolsIodineStatusEffect;
@@ -45,6 +46,7 @@ public final class RadiationZones implements ModInitializer {
     public static final String MOD_ID = "radiationzones";
     public static final Identifier LUGOLS_EFFECT_ID = Identifier.of(MOD_ID, "lugols_iodine");
     public static final Identifier LUGOLS_POTION_ID = Identifier.of(MOD_ID, "lugols_iodine");
+    private static final int EXIT_FADE_SECONDS = 5;
 
     private RadiationServerConfig config;
 
@@ -52,7 +54,9 @@ public final class RadiationZones implements ModInitializer {
     private RegistryEntry.Reference<Potion> lugolsPotion;
 
     private final Set<UUID> playersInRadiation = new HashSet<>();
+    private final Set<UUID> affectedPlayers = new HashSet<>();
     private final Set<UUID> hadLugolEffect = new HashSet<>();
+    private final Map<UUID, Integer> exitFadeByPlayer = new HashMap<>();
     private final Map<UUID, ServerBossBar> barsByPlayer = new HashMap<>();
 
     @Override
@@ -154,7 +158,9 @@ public final class RadiationZones implements ModInitializer {
 
             // cleanup maps for players that left
             this.playersInRadiation.removeIf(uuid -> !online.contains(uuid));
+            this.affectedPlayers.removeIf(uuid -> !online.contains(uuid));
             this.hadLugolEffect.removeIf(uuid -> !online.contains(uuid));
+            this.exitFadeByPlayer.entrySet().removeIf(entry -> !online.contains(entry.getKey()));
             this.barsByPlayer.entrySet().removeIf(entry -> !online.contains(entry.getKey()));
         });
     }
@@ -177,7 +183,29 @@ public final class RadiationZones implements ModInitializer {
 
         if (safeZone == null) {
             this.playersInRadiation.remove(playerId);
-            this.removeBar(player);
+            if (!this.affectedPlayers.contains(playerId)) {
+                this.exitFadeByPlayer.remove(playerId);
+                this.removeBar(player);
+                return;
+            }
+
+            int remaining = this.exitFadeByPlayer.getOrDefault(playerId, EXIT_FADE_SECONDS - 1);
+            if (remaining < 0) {
+                this.affectedPlayers.remove(playerId);
+                this.exitFadeByPlayer.remove(playerId);
+                this.removeBar(player);
+                return;
+            }
+
+            if (!hasLugol) {
+                for (StatusEffectInstance effect : this.buildRadiationEffects()) {
+                    player.addStatusEffect(effect);
+                }
+            }
+
+            this.showRadiationBar(player, (float) remaining / EXIT_FADE_SECONDS);
+            remaining--;
+            this.exitFadeByPlayer.put(playerId, remaining);
             return;
         }
 
@@ -186,11 +214,35 @@ public final class RadiationZones implements ModInitializer {
 
         if (!isInRadiationZone) {
             this.playersInRadiation.remove(playerId);
-            this.removeBar(player);
+            if (!this.affectedPlayers.contains(playerId)) {
+                this.exitFadeByPlayer.remove(playerId);
+                this.removeBar(player);
+                return;
+            }
+
+            int remaining = this.exitFadeByPlayer.getOrDefault(playerId, EXIT_FADE_SECONDS - 1);
+            if (remaining < 0) {
+                this.affectedPlayers.remove(playerId);
+                this.exitFadeByPlayer.remove(playerId);
+                this.removeBar(player);
+                return;
+            }
+
+            if (!hasLugol) {
+                for (StatusEffectInstance effect : this.buildRadiationEffects()) {
+                    player.addStatusEffect(effect);
+                }
+            }
+
+            this.showRadiationBar(player, (float) remaining / EXIT_FADE_SECONDS);
+            remaining--;
+            this.exitFadeByPlayer.put(playerId, remaining);
             return;
         }
 
         boolean entering = this.playersInRadiation.add(playerId);
+        this.affectedPlayers.add(playerId);
+        this.exitFadeByPlayer.remove(playerId);
         if (entering && this.config.getMessages().broadcastEnter()) {
             this.broadcast(allPlayers, this.replace(this.config.getMessages().enterTemplate(), player, dimensionId));
         }
@@ -201,10 +253,10 @@ public final class RadiationZones implements ModInitializer {
             }
         }
 
-        this.showRadiationBar(player);
+        this.showRadiationBar(player, 1.0F);
     }
 
-    private void showRadiationBar(ServerPlayerEntity player) {
+    private void showRadiationBar(ServerPlayerEntity player, float progress) {
         RadiationServerConfig.RadiationBar barConfig = this.config.getRadiationBar();
         if (!barConfig.enabled()) {
             this.removeBar(player);
@@ -212,12 +264,12 @@ public final class RadiationZones implements ModInitializer {
         }
 
         ServerBossBar bar = this.barsByPlayer.computeIfAbsent(player.getUuid(), ignored ->
-                new ServerBossBar(Text.literal(barConfig.title()), this.parseBarColor(barConfig.color()), this.parseBarStyle(barConfig.style())));
+                new ServerBossBar(this.createBarTitle(barConfig.title()), this.parseBarColor(barConfig.color()), this.parseBarStyle(barConfig.style())));
 
-        bar.setName(Text.literal(barConfig.title()));
+        bar.setName(this.createBarTitle(barConfig.title()));
         bar.setColor(this.parseBarColor(barConfig.color()));
         bar.setStyle(this.parseBarStyle(barConfig.style()));
-        bar.setPercent(1.0F);
+        bar.setPercent(Math.max(0.0F, Math.min(1.0F, progress)));
 
         if (!bar.getPlayers().contains(player)) {
             bar.addPlayer(player);
@@ -225,10 +277,14 @@ public final class RadiationZones implements ModInitializer {
     }
 
     private void removeBar(ServerPlayerEntity player) {
-        ServerBossBar bar = this.barsByPlayer.get(player.getUuid());
+        ServerBossBar bar = this.barsByPlayer.remove(player.getUuid());
         if (bar != null) {
             bar.removePlayer(player);
         }
+    }
+
+    private Text createBarTitle(String title) {
+        return Text.literal(title).formatted(Formatting.DARK_RED);
     }
 
     private List<StatusEffectInstance> buildRadiationEffects() {
