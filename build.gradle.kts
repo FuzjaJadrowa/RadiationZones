@@ -4,6 +4,7 @@ plugins {
 
 group = providers.gradleProperty("groupId").get()
 version = providers.gradleProperty("projectVersion").get()
+val projectId = providers.gradleProperty("projectId").get()
 
 subprojects {
     group = rootProject.group
@@ -19,28 +20,21 @@ subprojects {
     }
 }
 
-val fabricJar by tasks.registering(Copy::class) {
-    dependsOn(":fabric:build")
-    from(project(":fabric").layout.buildDirectory.file("libs/${providers.gradleProperty("projectId").get()}-fabric-${project.version}.jar"))
-    into(layout.buildDirectory.dir("multiloader"))
-    rename { "${providers.gradleProperty("projectId").get()}-fabric-${project.version}.jar" }
-}
-
-val neoforgeJar by tasks.registering(Copy::class) {
-    dependsOn(":neoforge:build")
-    from(project(":neoforge").layout.buildDirectory.file("libs/${providers.gradleProperty("projectId").get()}-neoforge-${project.version}.jar"))
-    into(layout.buildDirectory.dir("multiloader"))
-    rename { "${providers.gradleProperty("projectId").get()}-neoforge-${project.version}.jar" }
-}
+val fabricOutputJar = project(":fabric").layout.buildDirectory.file("libs/$projectId-fabric-${project.version}.jar")
+val neoforgeOutputJar = project(":neoforge").layout.buildDirectory.file("libs/$projectId-neoforge-${project.version}.jar")
 
 tasks.register<Jar>("multiloaderJar") {
     group = "build"
-    description = "Builds a single distribution archive with Fabric and NeoForge jars."
-    dependsOn(fabricJar, neoforgeJar)
-    archiveBaseName.set("${providers.gradleProperty("projectId").get()}-fabric-neoforge")
+    description = "Builds a single universal jar for Fabric and NeoForge."
+    dependsOn(":fabric:build", ":neoforge:build")
+    archiveBaseName.set("${projectId}-fabric-neoforge")
     archiveVersion.set(project.version.toString())
     destinationDirectory.set(layout.buildDirectory.dir("libs"))
-    from(layout.buildDirectory.dir("multiloader"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+
+    from(zipTree(fabricOutputJar))
+    from(zipTree(neoforgeOutputJar))
 }
 
 tasks.named("build") {

@@ -13,7 +13,7 @@
   "icon": "assets/radiationzones/textures/icon.png",
   "entrypoints": {
     "main": [
-      "pl.fuzjajadrowa.radiationzones.RadiationZones"
+      "pl.fuzjajadrowa.radiationzones.RadiationZonesFabric"
     ]
   },
   "depends": {

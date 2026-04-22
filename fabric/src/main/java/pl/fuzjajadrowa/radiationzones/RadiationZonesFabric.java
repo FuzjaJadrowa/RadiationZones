@@ -43,7 +43,7 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
-public final class RadiationZones implements ModInitializer {
+public final class RadiationZonesFabric implements ModInitializer {
     public static final String MOD_ID = "radiationzones";
     public static final Identifier LUGOLS_EFFECT_ID = Identifier.of(MOD_ID, "lugols_iodine");
     public static final Identifier LUGOLS_POTION_ID = Identifier.of(MOD_ID, "lugols_iodine");

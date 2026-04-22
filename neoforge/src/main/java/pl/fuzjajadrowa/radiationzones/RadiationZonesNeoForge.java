@@ -48,8 +48,8 @@ import java.util.UUID;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 
-@Mod(RadiationZones.MOD_ID)
-public final class RadiationZones {
+@Mod(RadiationZonesNeoForge.MOD_ID)
+public final class RadiationZonesNeoForge {
     public static final String MOD_ID = "radiationzones";
     private static final int EXIT_FADE_SECONDS = 5;
     private static final RadiationServerConfig CONFIG = RadiationServerConfig.loadOrCreate(FMLPaths.CONFIGDIR.get());
@@ -73,7 +73,7 @@ public final class RadiationZones {
     private final Map<UUID, Integer> exitFadeByPlayer = new HashMap<>();
     private final Map<UUID, ServerBossEvent> barsByPlayer = new HashMap<>();
 
-    public RadiationZones(IEventBus modBus) {
+    public RadiationZonesNeoForge(IEventBus modBus) {
         EFFECTS.register(modBus);
         POTIONS.register(modBus);
 
